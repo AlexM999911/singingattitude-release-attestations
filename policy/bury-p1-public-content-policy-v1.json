@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "bury-p1-public-content-policy-v1",
+  "trustModel": "BURY-P1-MODE-A-GITHUB-ATTESTATION-WITH-EXTERNAL-HUMAN-APPROVALS-V1",
+  "repositoryScope": "public-attestation-only",
+  "allow": [
+    "deterministic release manifests",
+    "private source commit and tree identifiers",
+    "path-list hashes",
+    "content-ledger hashes",
+    "complete-bundle hashes",
+    "migration, preflight, and read-back filenames, order, and hashes",
+    "non-sensitive approval and QA evidence references and SHA-256 values",
+    "policy and JSON Schema files",
+    "credentialless GitHub Actions workflows",
+    "GitHub-native attestation bundles",
+    "redacted verification receipts",
+    "protected one-use consumption receipts"
+  ],
+  "deny": [
+    "private Singing Attitude source code",
+    "application source patches",
+    "database dumps or customer database contents",
+    "customer or student data",
+    "raw email addresses",
+    "raw Supabase Auth UUIDs",
+    "credentials or API tokens",
+    "production environment values",
+    "Stripe, Supabase, Acuity, Cal.com, Resend, or SendPulse configuration",
+    "private keys",
+    "custom P-256 or Ed25519 signing material"
+  ],
+  "controls": {
+    "attestationOnly": true,
+    "humanApprovalsExternal": true,
+    "noCustomPrivateSigningKeys": true,
+    "noEnvironmentSecrets": true,
+    "noRepositorySecrets": true,
+    "sourceRepositoriesRemainPrivate": true
+  },
+  "authority": {
+    "repositoryCreationAuthorised": true,
+    "workflowImplementationAuthorised": false,
+    "p1ExecutionAuthorised": false,
+    "g2Authorised": false,
+    "databaseStartupOrMigrationAuthorised": false,
+    "productionChangeAuthorised": false,
+    "providerOperationAuthorised": false,
+    "bookingOperationAuthorised": false,
+    "paymentActivationAuthorised": false,
+    "emailAuthorised": false,
+    "deploymentAuthorised": false,
+    "publicBookingAuthorised": false
+  },
+  "futureNativeAttestationContract": {
+    "implementationStatus": "NOT_AUTHORISED",
+    "signing": "GitHub-native OIDC and Sigstore only",
+    "customSigningKey": false,
+    "repositorySecretRequired": false,
+    "environmentSecretRequired": false,
+    "permissions": {
+      "contents": "read",
+      "id-token": "write",
+      "attestations": "write"
+    },
+    "externalActionsPinnedToFullCommitSha": true,
+    "pullRequestTargetProhibited": true,
+    "untrustedForkAttestationProhibited": true,
+    "protectedMainOnly": true
+  }
+}
