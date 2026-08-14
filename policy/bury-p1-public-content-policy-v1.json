@@ -39,7 +39,8 @@
   },
   "authority": {
     "repositoryCreationAuthorised": true,
-    "workflowImplementationAuthorised": false,
+    "workflowImplementationAuthorised": true,
+    "trustedPullRequestValidatorImplementationAuthorised": true,
     "p1ExecutionAuthorised": false,
     "g2Authorised": false,
     "databaseStartupOrMigrationAuthorised": false,
@@ -51,14 +52,206 @@
     "deploymentAuthorised": false,
     "publicBookingAuthorised": false
   },
+  "trustedPullRequestValidation": {
+    "implementationStatus": "AUTHORISED_BASELINE",
+    "pullRequestTargetRequired": true,
+    "protectedBaseCodeOnly": true,
+    "protectedBaseBranch": "main",
+    "sameRepositoryPullRequestsOnly": true,
+    "headCheckoutOrExecutionProhibited": true,
+    "headGitObjectsReadOnlyViaGitHubApi": true,
+    "externalActionsPinnedToFullCommitSha": true,
+    "maxChangedFiles": 32,
+    "maxFileBytes": 65536,
+    "maxTotalBytes": 262144,
+    "protectedPaths": [
+      ".github/workflows/bury-p1-trusted-pr-validation.yml",
+      ".github/workflows/bury-p1-activation-probe.yml",
+      "docs/bury-p1-required-workflow-ruleset.md",
+      "policy/bury-p1-public-content-policy-v1.json",
+      "scripts/validate-bury-p1-pull-request.mjs",
+      "scripts/build-bury-p1-required-workflow-ruleset.mjs",
+      "scripts/verify-bury-p1-required-workflow-ruleset.mjs",
+      "scripts/validate-bury-p1-release-bundle.mjs",
+      "scripts/consume-bury-p1-release.mjs",
+      "scripts/run-bury-p1-activation-probe.mjs",
+      "scripts/lib/bury-p1-trusted-pr-validator.mjs",
+      "scripts/lib/bury-p1-release-runtime.mjs",
+      "test/bury-p1-trusted-pr-validator.test.mjs",
+      "test/bury-p1-release-runtime.test.mjs"
+    ],
+    "allowedPathPatterns": [
+      "^README\\.md$",
+      "^SECURITY\\.md$",
+      "^schemas/bury-p1-[a-z0-9-]+-v1\\.schema\\.json$",
+      "^manifests/bury-p1-reviewed(?:-complete-bundle|-content-ledger|-candidate-tree)?\\.json$",
+      "^approvals/bury-p1-(?:business-release|independent-qa)\\.json$",
+      "^\\.github/workflows/bury-p1-(?:manifest-validation|native-attestation|one-use-consumption)\\.yml$"
+    ],
+    "reservedWorkflowPaths": [
+      ".github/workflows/bury-p1-manifest-validation.yml",
+      ".github/workflows/bury-p1-native-attestation.yml",
+      ".github/workflows/bury-p1-one-use-consumption.yml"
+    ],
+    "workflowContractMode": "IMMUTABLE_PATH_SPECIFIC_CLOSED_CONSERVATIVE_YAML",
+    "approvedWorkflowContracts": {
+      ".github/workflows/bury-p1-manifest-validation.yml": {
+        "allowedTriggers": ["workflow_dispatch"],
+        "allowedActions": ["actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"],
+        "requiredActionCounts": {"actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683": 1},
+        "allowedRunCommands": ["node scripts/validate-bury-p1-release-bundle.mjs"],
+        "requiredRunCounts": {"node scripts/validate-bury-p1-release-bundle.mjs": 1},
+        "exactActionInputs": {"actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683": {"repository": "AlexM999911/singingattitude-release-attestations", "ref": "${{ github.sha }}", "persist-credentials": "false"}},
+        "exactEnvironmentEntries": {},
+        "exactRunConditions": {},
+        "allowedTopLevelKeys": ["name", "on", "permissions", "jobs"],
+        "allowedJobKeys": ["name", "runs-on", "timeout-minutes", "permissions", "steps"],
+        "allowedStepKeys": ["name", "uses", "with", "run"],
+        "allowedWithKeys": ["repository", "ref", "persist-credentials"],
+        "allowedPermissionEntries": ["contents:read"],
+        "requiredEnvironment": false,
+        "requiredJobKeys": ["name", "runs-on", "timeout-minutes", "permissions", "steps"],
+        "requiredPermissionEntries": ["contents:read"]
+      },
+      ".github/workflows/bury-p1-native-attestation.yml": {
+        "allowedTriggers": ["workflow_dispatch"],
+        "allowedActions": [
+          "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6"
+        ],
+        "requiredActionCounts": {
+          "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683": 1,
+          "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6": 1
+        },
+        "allowedRunCommands": ["node scripts/validate-bury-p1-release-bundle.mjs"],
+        "requiredRunCounts": {"node scripts/validate-bury-p1-release-bundle.mjs": 1},
+        "exactActionInputs": {
+          "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683": {"repository": "AlexM999911/singingattitude-release-attestations", "ref": "${{ github.sha }}", "persist-credentials": "false"},
+          "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6": {"subject-path": "manifests/bury-p1-reviewed.json", "push-to-registry": "false", "show-summary": "false"}
+        },
+        "exactEnvironmentEntries": {},
+        "exactRunConditions": {},
+        "allowedTopLevelKeys": ["name", "on", "permissions", "jobs"],
+        "allowedJobKeys": ["name", "runs-on", "timeout-minutes", "environment", "permissions", "steps"],
+        "allowedStepKeys": ["name", "uses", "with", "run"],
+        "allowedWithKeys": ["repository", "ref", "persist-credentials", "subject-path", "push-to-registry", "show-summary"],
+        "allowedPermissionEntries": ["contents:read", "id-token:write", "attestations:write"],
+        "requiredEnvironment": true,
+        "requiredJobKeys": ["name", "runs-on", "timeout-minutes", "environment", "permissions", "steps"],
+        "requiredPermissionEntries": ["contents:read", "id-token:write", "attestations:write"]
+      },
+      ".github/workflows/bury-p1-one-use-consumption.yml": {
+        "allowedTriggers": ["workflow_dispatch"],
+        "allowedActions": [
+          "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6"
+        ],
+        "requiredActionCounts": {
+          "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683": 1,
+          "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6": 1
+        },
+        "allowedRunCommands": [
+          "node scripts/consume-bury-p1-release.mjs preflight",
+          "node scripts/consume-bury-p1-release.mjs finalize"
+        ],
+        "requiredRunCounts": {
+          "node scripts/consume-bury-p1-release.mjs preflight": 1,
+          "node scripts/consume-bury-p1-release.mjs finalize": 1
+        },
+        "exactActionInputs": {
+          "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683": {"repository": "AlexM999911/singingattitude-release-attestations", "ref": "${{ github.sha }}", "persist-credentials": "false"},
+          "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6": {"subject-path": "claims/bury-p1-pending.json", "push-to-registry": "false", "show-summary": "false"}
+        },
+        "exactEnvironmentEntries": {"GH_TOKEN": "${{ github.token }}"},
+        "exactRunConditions": {"node scripts/consume-bury-p1-release.mjs finalize": "always()"},
+        "allowedTopLevelKeys": ["name", "on", "permissions", "jobs"],
+        "allowedJobKeys": ["name", "runs-on", "timeout-minutes", "environment", "permissions", "env", "steps"],
+        "allowedStepKeys": ["name", "uses", "with", "run", "if"],
+        "allowedWithKeys": ["repository", "ref", "persist-credentials", "subject-path", "push-to-registry", "show-summary"],
+        "allowedPermissionEntries": ["contents:read", "contents:write", "id-token:write", "attestations:write"],
+        "requiredEnvironment": true,
+        "requiredJobKeys": ["name", "runs-on", "timeout-minutes", "environment", "permissions", "env", "steps"],
+        "requiredPermissionEntries": ["contents:write", "id-token:write", "attestations:write"]
+      }
+    },
+    "jsonContractMode": "IMMUTABLE_PATH_SPECIFIC_CLOSED_JSON_SCHEMA",
+    "approvedJsonContracts": {
+      "schemas/bury-p1-attestation-manifest-v1.schema.json": {
+        "schemaProfile": "attestation-manifest",
+        "schemaId": "https://github.com/AlexM999911/singingattitude-release-attestations/schemas/bury-p1-attestation-manifest-v1.schema.json",
+        "requiredRootProperties": ["schemaVersion", "recordId", "trustModel", "repository", "authorization", "candidate", "target", "executionWindow", "migrations", "approvals", "actors", "boundaries"],
+        "requiredTrueCheckProperties": []
+      },
+      "schemas/bury-p1-consumption-claim-v1.schema.json": {
+        "schemaProfile": "consumption-claim",
+        "schemaId": "https://github.com/AlexM999911/singingattitude-release-attestations/schemas/bury-p1-consumption-claim-v1.schema.json",
+        "requiredRootProperties": ["schemaVersion", "authorizationId", "repository", "claimTag", "manifestSha256", "attestationBundleSha256", "candidateCommit", "businessApprovalSha256", "qaReceiptSha256", "executionWindow", "workflowRun", "oneUse", "p1Authorized", "g2Authorized", "issuedAtUtc"],
+        "requiredTrueCheckProperties": []
+      },
+      "schemas/bury-p1-external-approval-reference-v1.schema.json": {
+        "schemaProfile": "external-approval-reference",
+        "schemaId": "https://github.com/AlexM999911/singingattitude-release-attestations/schemas/bury-p1-external-approval-reference-v1.schema.json",
+        "requiredRootProperties": ["schemaVersion", "authorityRole", "decision", "evidenceReference", "evidenceSha256", "acceptedAtUtc", "validUntilUtc", "subjectCommit", "subjectCandidateLedgerSha256", "authorityGrants"],
+        "requiredTrueCheckProperties": []
+      },
+      "schemas/bury-p1-verification-receipt-v1.schema.json": {
+        "schemaProfile": "verification-receipt",
+        "schemaId": "https://github.com/AlexM999911/singingattitude-release-attestations/schemas/bury-p1-verification-receipt-v1.schema.json",
+        "requiredRootProperties": ["schemaVersion", "recordId", "result", "verifiedAtUtc", "repository", "candidateCommit", "manifestSha256", "attestationBundleSha256", "businessApprovalSha256", "qaReceiptSha256", "claim", "finalizerWorkflowRun", "checks", "authorityGrants"],
+        "requiredTrueCheckProperties": ["repositoryIdentity", "workflowIdentity", "candidateBinding", "manifestBinding", "contentLedgerBinding", "migrationLedgerBinding", "externalApprovals", "actorBinding", "executionWindow", "nativeAttestation", "oneUse", "g2Locked"]
+      }
+    },
+    "requiredWorkflowEnforcement": {
+      "mechanism": "repository ruleset workflows rule",
+      "apiVersion": "2026-03-10",
+      "workflowPath": ".github/workflows/bury-p1-trusted-pr-validation.yml",
+      "workflowRef": "refs/heads/main",
+      "repository": "AlexM999911/singingattitude-release-attestations",
+      "repositoryId": 1331425769,
+      "repositoryIdRequired": true,
+      "exactMergedWorkflowShaRequired": true,
+      "genericStatusContextProhibited": true,
+      "implementationStatus": "BLOCKED_UNTIL_POST_MERGE_ACTIVE_RULESET_READBACK"
+    },
+    "immutableConsumptionTagEnforcement": {
+      "targetPatterns": ["refs/tags/bury-p1-consumed/*", "refs/tags/bury-p1-receipted/*"],
+      "updateProhibited": true,
+      "deletionProhibited": true,
+      "bypassActors": [],
+      "implementationStatus": "BLOCKED_UNTIL_ACTIVE_RULESET_READBACK"
+    },
+    "consumptionTagCreationEnforcement": {
+      "targetPatterns": ["refs/tags/bury-p1-consumed/*", "refs/tags/bury-p1-receipted/*"],
+      "creationRestricted": true,
+      "onlyBypassActor": {"actorId": 15368, "actorType": "Integration", "bypassMode": "always"},
+      "securityDependency": "trusted validator prohibits every other contents-write workflow",
+      "implementationStatus": "BLOCKED_UNTIL_ACTIVE_RULESET_AND_RULE_SUITE_READBACK"
+    },
+    "activationProbe": {
+      "workflowPath": ".github/workflows/bury-p1-activation-probe.yml",
+      "scriptPath": "scripts/run-bury-p1-activation-probe.mjs",
+      "trigger": "workflow_dispatch-with-no-inputs",
+      "protectedMainOnly": true,
+      "protectedEnvironment": "bury-p1-attestation",
+      "fixedRef": "refs/tags/bury-p1-consumed/ACTIVATION-PROBE-ACTIONS",
+      "mutationSurface": ["create-annotated-tag-object", "create-fixed-ref", "attempt-fixed-ref-update", "attempt-fixed-ref-delete"],
+      "ruleSuiteRetrieval": "external-administration-read-required"
+    }
+  },
   "futureNativeAttestationContract": {
-    "implementationStatus": "NOT_AUTHORISED",
+    "scope": "native-attestation-and-consumption-workflows-only",
+    "implementationStatus": "AUTHORISED_PROTECTED_RUNTIME_CONTRACT",
     "signing": "GitHub-native OIDC and Sigstore only",
     "customSigningKey": false,
     "repositorySecretRequired": false,
     "environmentSecretRequired": false,
-    "permissions": {
+    "nativeAttestationPermissions": {
       "contents": "read",
+      "id-token": "write",
+      "attestations": "write"
+    },
+    "oneUseConsumptionPermissions": {
+      "contents": "write",
       "id-token": "write",
       "attestations": "write"
     },

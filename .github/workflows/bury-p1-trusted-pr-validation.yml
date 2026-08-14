@@ -1,0 +1,33 @@
+name: Bury P1 trusted PR validation
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions: {}
+
+jobs:
+  validate-trusted-bury-p1-policy:
+    name: validate trusted Bury P1 policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Check out the protected base only
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: AlexM999911/singingattitude-release-attestations
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: trusted-base
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate PR head objects as inert data
+        env:
+          EXPECTED_REPOSITORY: AlexM999911/singingattitude-release-attestations
+          GH_TOKEN: ${{ github.token }}
+          TRUSTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node trusted-base/scripts/validate-bury-p1-pull-request.mjs

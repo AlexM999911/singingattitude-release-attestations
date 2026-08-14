@@ -1,0 +1,23 @@
+name: Bury P1 tag-ruleset activation probe
+on:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  activation-probe:
+    name: activation-probe
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: bury-p1-attestation
+    env:
+      GH_TOKEN: ${{ github.token }}
+    permissions:
+      contents: write
+    steps:
+      - name: checkout protected probe
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: AlexM999911/singingattitude-release-attestations
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: run fixed activation probe
+        run: node scripts/run-bury-p1-activation-probe.mjs
