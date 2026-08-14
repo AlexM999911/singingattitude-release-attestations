@@ -1,0 +1,29 @@
+name: Safe Bury P1 workflow
+on:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  safe-job:
+    name: safe-job
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: bury-p1-attestation
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: safe action 1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: AlexM999911/singingattitude-release-attestations
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: protected runtime 1
+        run: node scripts/validate-bury-p1-release-bundle.mjs
+      - name: safe action 2
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: manifests/bury-p1-reviewed.json
+          push-to-registry: false
+          show-summary: false
