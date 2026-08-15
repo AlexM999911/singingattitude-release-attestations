@@ -8,4 +8,4 @@ Permitted artifacts are limited by [`policy/bury-p1-public-content-policy-v1.jso
 
 Repository attestations establish cryptographic provenance only. They do not themselves authorise Bury P1 execution, G2, migrations, production changes, provider operations, bookings, payments, email, deployment, or public booking. Human approvals remain externally recorded, attributable, canonical, and checksum-sealed evidence.
 
-No attestation or one-use workflow is included in this bootstrap.
+The repository contains credentialless attestation and one-use workflow definitions. Their presence grants no execution authority: P1 remains blocked until every protected validation, source-bound required-check, external approval, environment, claim-protection, and activation read-back gate passes.
