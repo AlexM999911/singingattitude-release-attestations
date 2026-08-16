@@ -26,7 +26,11 @@ export function loadReleaseDocuments({ readFileFn = readFileSync } = {}) {
   };
 }
 
-export function main({ now = new Date().toISOString().replace(".000Z", "Z"), readFileFn = readFileSync } = {}) {
+export function canonicalUtcNow(date = new Date()) {
+  return `${date.toISOString().slice(0, 19)}Z`;
+}
+
+export function main({ now = canonicalUtcNow(), readFileFn = readFileSync } = {}) {
   const result = validateReleaseBundle({
     ...loadReleaseDocuments({ readFileFn }),
     now,

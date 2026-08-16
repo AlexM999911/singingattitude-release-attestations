@@ -15,7 +15,7 @@ import {
   verifyAnyNativeAttestation,
   verifyNativeAttestation,
 } from "../scripts/consume-bury-p1-release.mjs";
-import { loadReleaseDocuments } from "../scripts/validate-bury-p1-release-bundle.mjs";
+import { canonicalUtcNow, loadReleaseDocuments } from "../scripts/validate-bury-p1-release-bundle.mjs";
 import { validatePullRequestSnapshot } from "../scripts/lib/bury-p1-trusted-pr-validator.mjs";
 import { main as activationProbeMain, runActivationProbe } from "../scripts/run-bury-p1-activation-probe.mjs";
 
@@ -161,6 +161,11 @@ test("release document loader reads only the V2 owner authorization and exact-by
   assert.equal(loaded.ownerAuthorizationSha256Sidecar, value.ownerAuthorizationSha256Sidecar);
   assert.equal(reads.some((path) => path.startsWith("approvals/")), false);
   assert.doesNotThrow(() => validateReleaseBundle({ ...loaded, now: NOW, documentsOnly: true }));
+});
+
+test("default validation timestamps are canonical for non-zero milliseconds", () => {
+  assert.equal(canonicalUtcNow(new Date("2026-08-16T16:46:44.731Z")), "2026-08-16T16:46:44Z");
+  assert.equal(canonicalUtcNow(new Date("2026-08-16T16:46:44.000Z")), "2026-08-16T16:46:44Z");
 });
 
 test("fails closed for owner, candidate, manifest, expiry, replay, and scope drift", () => {
