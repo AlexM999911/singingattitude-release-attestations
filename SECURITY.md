@@ -10,4 +10,4 @@ This repository is public. Never disclose or commit:
 
 Do not place sensitive material in commits, pull requests, discussions, or repository metadata. Issues, the wiki, and discussions are disabled. If sensitive material is discovered, do not quote or reproduce it publicly; use GitHub's private security-reporting channel for the repository owner.
 
-Attestation verification failures must fail closed. A repository attestation is evidence of provenance, not authority to execute P1, G2, production, payment, booking, email, deployment, or public-booking actions.
+Attestation and owner-authorization verification failures must fail closed. The V2 owner receipt can authorise only the exact candidate and bounded disposable P1 scope recorded in it; it cannot authorise G2, production credentials, provider operations, payment, booking, email, deployment, or public-booking actions.

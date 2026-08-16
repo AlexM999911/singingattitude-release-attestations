@@ -3,6 +3,12 @@ import { createHash } from "node:crypto";
 export const REPOSITORY = "AlexM999911/singingattitude-release-attestations";
 export const CONSUMPTION_WORKFLOW = ".github/workflows/bury-p1-one-use-consumption.yml";
 export const ATTESTATION_WORKFLOW = ".github/workflows/bury-p1-native-attestation.yml";
+export const OWNER_IDENTITY = Object.freeze({
+  githubLogin: "AlexM999911",
+  githubAccountId: "234956861",
+  businessOwner: true,
+  technicalOwner: true,
+});
 
 const SHA256 = /^[0-9a-f]{64}$/;
 const GIT_SHA = /^[0-9a-f]{40}$/;
@@ -15,12 +21,15 @@ const REQUIRED_CHECKS = [
   "manifestBinding",
   "contentLedgerBinding",
   "migrationLedgerBinding",
-  "externalApprovals",
-  "actorBinding",
+  "ownerAuthorization",
+  "ownerIdentity",
   "executionWindow",
   "nativeAttestation",
   "oneUse",
   "g2Locked",
+  "productionBookingLocked",
+  "recoveryAuthority",
+  "rollbackAuthority",
 ];
 
 function canonical(value) {
@@ -37,6 +46,11 @@ export function canonicalJson(value) {
 
 export function sha256Json(value) {
   return createHash("sha256").update(canonicalJson(value)).digest("hex");
+}
+
+export function ownerAuthorizationSidecar(bytes) {
+  if (typeof bytes !== "string") fail("owner authorization bytes are required for the sidecar");
+  return `${createHash("sha256").update(bytes, "utf8").digest("hex")}  authorizations/bury-p1-owner-authorization.json\n`;
 }
 
 function fail(message) {
@@ -80,41 +94,57 @@ function assertPublicValue(value, name = "record") {
   if (forbidden.some((pattern) => pattern.test(text))) fail(`${name} contains prohibited public content`);
 }
 
-function validateApproval(approval, role, manifest, ledgerSha, nowMillis) {
-  object(approval, `${role} approval`, [
-    "schemaVersion", "authorityRole", "decision", "evidenceReference", "evidenceSha256",
-    "acceptedAtUtc", "validUntilUtc", "subjectCommit", "subjectCandidateLedgerSha256", "authorityGrants",
-  ]);
-  if (approval.schemaVersion !== "bury-p1-external-approval-reference-v1") fail(`${role} approval schema`);
-  if (approval.authorityRole !== role) fail(`${role} approval role`);
-  const expectedDecision = role === "business-release-owner" ? "APPROVED" : "PASS";
-  if (approval.decision !== expectedDecision) fail(`${role} approval decision`);
-  string(approval.evidenceReference, /^BURY-[A-Z0-9][A-Z0-9/._:-]{7,200}$/, `${role} evidence reference`);
-  const requiredPrefix = role === "business-release-owner" ? "BURY-LIUBA/" : "BURY-MATTHEW/";
-  if (!approval.evidenceReference.startsWith(requiredPrefix)) fail(`${role} evidence is not attributable to the approved external authority`);
-  string(approval.evidenceSha256, SHA256, `${role} evidence digest`);
-  if (approval.subjectCommit !== manifest.candidate.commit) fail(`${role} candidate commit`);
-  if (approval.subjectCandidateLedgerSha256 !== ledgerSha) fail(`${role} candidate ledger`);
-  if (!Array.isArray(approval.authorityGrants) || approval.authorityGrants.length !== 0) fail(`${role} grants authority`);
-  const accepted = utcMillis(approval.acceptedAtUtc, `${role} acceptedAtUtc`);
-  const validUntil = utcMillis(approval.validUntilUtc, `${role} validUntilUtc`);
-  if (accepted > nowMillis || validUntil < nowMillis || accepted >= validUntil) fail(`${role} approval window`);
-  assertPublicValue(approval, `${role} approval`);
+function validateOwnerIdentity(value, name) {
+  object(value, name, ["githubLogin", "githubAccountId", "businessOwner", "technicalOwner"]);
+  equal(value, OWNER_IDENTITY, name);
 }
 
-function validateExistingClaim(claim, { manifest, manifestSha256, attestation, approvalByRole, nowMillis }) {
+function validateOwnerAuthorization(ownerAuthorization, bytes, sidecar, manifest, nowMillis) {
+  object(ownerAuthorization, "owner authorization", [
+    "schemaVersion", "ownerIdentity", "candidateCommit", "candidateTree", "manifestSha256",
+    "migrationHashes", "executionWindow", "recoveryOwner", "rollbackAuthority", "oneUse",
+    "g2Authorized", "productionBookingAuthorized",
+  ]);
+  if (ownerAuthorization.schemaVersion !== "BURY_P1_OWNER_AUTHORIZATION_V2") fail("owner authorization schema");
+  validateOwnerIdentity(ownerAuthorization.ownerIdentity, "owner identity");
+  validateOwnerIdentity(ownerAuthorization.recoveryOwner, "recovery owner");
+  validateOwnerIdentity(ownerAuthorization.rollbackAuthority, "rollback authority");
+  if (
+    ownerAuthorization.candidateCommit !== manifest.candidate.commit
+    || ownerAuthorization.candidateTree !== manifest.candidate.tree
+    || ownerAuthorization.manifestSha256 !== sha256Json(manifest)
+  ) fail("owner authorization candidate or manifest binding");
+  equal(ownerAuthorization.migrationHashes, manifest.migrations, "owner authorization migration hashes");
+  equal(ownerAuthorization.executionWindow, manifest.executionWindow, "owner authorization execution window");
+  if (
+    ownerAuthorization.oneUse !== true
+    || ownerAuthorization.g2Authorized !== false
+    || ownerAuthorization.productionBookingAuthorized !== false
+  ) fail("owner authorization scope");
+  const starts = utcMillis(ownerAuthorization.executionWindow.startsAtUtc, "owner authorization window start");
+  const expires = utcMillis(ownerAuthorization.executionWindow.expiresAtUtc, "owner authorization window expiry");
+  if (starts > nowMillis || expires < nowMillis || starts >= expires) fail("owner authorization window");
+  if (typeof bytes !== "string" || bytes.length === 0 || bytes.length > 256 * 1024) fail("owner authorization bytes");
+  let parsedBytes;
+  try { parsedBytes = JSON.parse(bytes); } catch { fail("owner authorization bytes are not valid JSON"); }
+  equal(parsedBytes, ownerAuthorization, "owner authorization parsed bytes");
+  if (sidecar !== ownerAuthorizationSidecar(bytes)) fail("owner authorization SHA-256 sidecar");
+  assertPublicValue(ownerAuthorization, "owner authorization");
+}
+
+function validateExistingClaim(claim, { manifest, manifestSha256, attestation, ownerAuthorizationSha256, nowMillis }) {
   if (claim === null || claim === undefined) return;
   object(claim, "existing claim", [
     "schemaVersion", "authorizationId", "repository", "claimTag", "manifestSha256",
-    "attestationBundleSha256", "candidateCommit", "businessApprovalSha256", "qaReceiptSha256",
-    "executionWindow", "workflowRun", "oneUse", "p1Authorized", "g2Authorized", "issuedAtUtc",
+    "attestationBundleSha256", "candidateCommit", "ownerAuthorizationSha256", "executionWindow",
+    "workflowRun", "oneUse", "p1Authorized", "g2Authorized", "productionBookingAuthorized", "issuedAtUtc",
   ]);
-  if (claim.schemaVersion !== "bury-p1-consumption-claim-v1" || claim.authorizationId !== manifest.authorization.authorizationId || claim.repository !== REPOSITORY || claim.claimTag !== `bury-p1-consumed/${manifest.authorization.authorizationId}` || claim.manifestSha256 !== manifestSha256) fail("existing claim identity/repository/manifest binding");
-  if (claim.attestationBundleSha256 !== attestation.bundleSha256 || claim.candidateCommit !== manifest.candidate.commit || claim.businessApprovalSha256 !== sha256Json(approvalByRole.get("business-release-owner")) || claim.qaReceiptSha256 !== sha256Json(approvalByRole.get("independent-qa-reviewer"))) fail("existing claim candidate/attestation/approval binding");
+  if (claim.schemaVersion !== "bury-p1-consumption-claim-v2" || claim.authorizationId !== manifest.authorization.authorizationId || claim.repository !== REPOSITORY || claim.claimTag !== `bury-p1-consumed/${manifest.authorization.authorizationId}` || claim.manifestSha256 !== manifestSha256) fail("existing claim identity/repository/manifest binding");
+  if (claim.attestationBundleSha256 !== attestation.bundleSha256 || claim.candidateCommit !== manifest.candidate.commit || claim.ownerAuthorizationSha256 !== ownerAuthorizationSha256) fail("existing claim candidate/attestation/owner binding");
   equal(claim.executionWindow, manifest.executionWindow, "existing claim execution window");
-  if (claim.oneUse !== true || claim.p1Authorized !== true || claim.g2Authorized !== false) fail("existing claim authority flags");
+  if (claim.oneUse !== true || claim.p1Authorized !== true || claim.g2Authorized !== false || claim.productionBookingAuthorized !== false) fail("existing claim authority flags");
   object(claim.workflowRun, "existing claim workflow provenance", ["repository", "workflow", "ref", "sha", "runId", "runAttempt", "actor", "actorId"]);
-  if (claim.workflowRun.repository !== REPOSITORY || claim.workflowRun.workflow !== CONSUMPTION_WORKFLOW || claim.workflowRun.ref !== "refs/heads/main" || claim.workflowRun.actor !== "AlexM999911" || claim.workflowRun.actorId !== manifest.actors.repositoryExecutor.githubAccountId) fail("existing claim workflow/actor provenance");
+  if (claim.workflowRun.repository !== REPOSITORY || claim.workflowRun.workflow !== CONSUMPTION_WORKFLOW || claim.workflowRun.ref !== "refs/heads/main" || claim.workflowRun.actor !== OWNER_IDENTITY.githubLogin || claim.workflowRun.actorId !== OWNER_IDENTITY.githubAccountId) fail("existing claim workflow/actor provenance");
   string(claim.workflowRun.sha, GIT_SHA, "existing claim workflow SHA");
   string(claim.workflowRun.runId, /^[1-9][0-9]{0,19}$/, "existing claim run ID");
   string(claim.workflowRun.runAttempt, /^[1-9][0-9]{0,9}$/, "existing claim run attempt");
@@ -124,7 +154,9 @@ function validateExistingClaim(claim, { manifest, manifestSha256, attestation, a
 
 export function validateReleaseBundle({
   manifest,
-  approvals,
+  ownerAuthorization,
+  ownerAuthorizationBytes,
+  ownerAuthorizationSha256Sidecar,
   completeBundle,
   contentLedger,
   candidateTree,
@@ -134,13 +166,13 @@ export function validateReleaseBundle({
   claimState = null,
   documentsOnly = false,
 }) {
-  object(manifest, "manifest", ["schemaVersion", "recordId", "trustModel", "repository", "authorization", "candidate", "target", "executionWindow", "migrations", "approvals", "actors", "boundaries"]);
-  if (manifest.schemaVersion !== "bury-p1-attestation-manifest-v1" || !AUTHORIZATION.test(manifest.recordId)) fail("manifest identity");
-  if (manifest.trustModel !== "BURY-P1-MODE-A-GITHUB-ATTESTATION-WITH-EXTERNAL-HUMAN-APPROVALS-V1") fail("trust model");
+  object(manifest, "manifest", ["schemaVersion", "recordId", "trustModel", "repository", "authorization", "candidate", "target", "executionWindow", "migrations", "owner", "boundaries"]);
+  if (manifest.schemaVersion !== "bury-p1-attestation-manifest-v2" || !AUTHORIZATION.test(manifest.recordId)) fail("manifest identity");
+  if (manifest.trustModel !== "BURY-P1-MODE-A-GITHUB-ATTESTATION-SINGLE-OWNER-V2") fail("trust model");
   if (manifest.repository !== REPOSITORY) fail("repository identity");
-  object(manifest.authorization, "authorization", ["authorizationId", "oneUse", "p1Authorized", "g2Authorized"]);
+  object(manifest.authorization, "authorization", ["authorizationId", "oneUse", "p1Authorized", "g2Authorized", "productionBookingAuthorized"]);
   string(manifest.authorization.authorizationId, AUTHORIZATION, "authorization ID");
-  if (manifest.authorization.oneUse !== true || manifest.authorization.p1Authorized !== true || manifest.authorization.g2Authorized !== false) fail("authority flags");
+  if (manifest.authorization.authorizationId !== manifest.recordId || manifest.authorization.oneUse !== true || manifest.authorization.p1Authorized !== true || manifest.authorization.g2Authorized !== false || manifest.authorization.productionBookingAuthorized !== false) fail("authority flags");
   object(manifest.candidate, "candidate", ["commit", "tree", "pathListSha256", "contentLedgerSha256", "completeBundleSha256", "migrationLedgerSha256"]);
   for (const key of ["pathListSha256", "contentLedgerSha256", "completeBundleSha256", "migrationLedgerSha256"]) string(manifest.candidate[key], SHA256, `candidate ${key}`);
   string(manifest.candidate.commit, GIT_SHA, "candidate commit");
@@ -172,15 +204,9 @@ export function validateReleaseBundle({
   });
   if (sha256Json(manifest.migrations.map(({ path, sha256 }) => ({ path, sha256 }))) !== manifest.candidate.migrationLedgerSha256) fail("migration ledger digest");
 
-  if (!Array.isArray(approvals) || approvals.length !== 2) fail("exactly two external approvals are required");
   const nowMillis = utcMillis(now, "validation time");
-  const approvalByRole = new Map(approvals.map((approval) => [approval.authorityRole, approval]));
-  if (approvalByRole.size !== 2) fail("approval roles must be unique");
-  validateApproval(approvalByRole.get("business-release-owner"), "business-release-owner", manifest, manifest.candidate.contentLedgerSha256, nowMillis);
-  validateApproval(approvalByRole.get("independent-qa-reviewer"), "independent-qa-reviewer", manifest, manifest.candidate.contentLedgerSha256, nowMillis);
-  const expectedApprovalReferences = ["business-release-owner", "independent-qa-reviewer"].map((role) => ({ role, approval: approvalByRole.get(role) })).map(({ role, approval }) => ({ authorityRole: role, sha256: sha256Json(approval) }));
-  equal(manifest.approvals, expectedApprovalReferences, "manifest approval references");
-  if (manifest.actors.businessReleaseEvidenceReference !== approvalByRole.get("business-release-owner").evidenceReference || manifest.actors.independentQaEvidenceReference !== approvalByRole.get("independent-qa-reviewer").evidenceReference) fail("approval actor evidence references");
+  validateOwnerAuthorization(ownerAuthorization, ownerAuthorizationBytes, ownerAuthorizationSha256Sidecar, manifest, nowMillis);
+  const ownerAuthorizationSha256 = sha256Json(ownerAuthorization);
 
   object(manifest.target, "target", ["profile", "reference", "nonProduction", "noCustomerData", "exclusiveLocalhost"]);
   if (manifest.target.profile !== "isolated-localhost-disposable-v1" || !/^local-supabase:\/\/[a-z0-9-]{8,96}$/.test(manifest.target.reference) || manifest.target.nonProduction !== true || manifest.target.noCustomerData !== true || manifest.target.exclusiveLocalhost !== true) fail("disposable target boundary");
@@ -191,12 +217,10 @@ export function validateReleaseBundle({
   const expires = utcMillis(manifest.executionWindow.expiresAtUtc, "window expiry");
   if (starts > nowMillis || expires < nowMillis || starts >= expires || expires - starts > 24 * 60 * 60 * 1000) fail("execution window");
 
-  object(manifest.actors, "actors", ["repositoryExecutor", "businessReleaseEvidenceReference", "independentQaEvidenceReference"]);
-  object(manifest.actors.repositoryExecutor, "repository executor", ["githubLogin", "githubAccountId"]);
-  if (manifest.actors.repositoryExecutor.githubLogin !== "AlexM999911") fail("repository executor must remain the approved Alex operator");
+  validateOwnerIdentity(manifest.owner, "manifest owner");
   if (!documentsOnly) {
     object(executor, "workflow executor", ["login", "id", "repository", "workflowPath", "ref", "sha", "runId", "runAttempt"]);
-    if (executor.login !== manifest.actors.repositoryExecutor.githubLogin || executor.id !== manifest.actors.repositoryExecutor.githubAccountId || executor.repository !== REPOSITORY || executor.workflowPath !== CONSUMPTION_WORKFLOW || executor.ref !== "refs/heads/main") fail("executor identity");
+    if (executor.login !== OWNER_IDENTITY.githubLogin || executor.id !== OWNER_IDENTITY.githubAccountId || executor.repository !== REPOSITORY || executor.workflowPath !== CONSUMPTION_WORKFLOW || executor.ref !== "refs/heads/main") fail("executor identity");
     string(executor.sha, GIT_SHA, "executor SHA");
     string(executor.runId, /^[1-9][0-9]{0,19}$/, "run ID");
     string(executor.runAttempt, /^[1-9][0-9]{0,9}$/, "run attempt");
@@ -206,31 +230,29 @@ export function validateReleaseBundle({
     string(attestation.bundleSha256, SHA256, "attestation bundle digest");
   }
 
-  object(completeBundle, "complete bundle", ["schemaVersion", "candidateCommit", "candidateTree", "pathListSha256", "contentLedgerSha256", "migrationLedgerSha256", "approvalReferences"]);
-  if (completeBundle.schemaVersion !== "bury-p1-complete-bundle-v1" || completeBundle.candidateCommit !== manifest.candidate.commit || completeBundle.candidateTree !== manifest.candidate.tree || completeBundle.pathListSha256 !== manifest.candidate.pathListSha256 || completeBundle.contentLedgerSha256 !== manifest.candidate.contentLedgerSha256 || completeBundle.migrationLedgerSha256 !== manifest.candidate.migrationLedgerSha256) fail("complete bundle cross-record binding");
-  equal(completeBundle.approvalReferences, expectedApprovalReferences, "complete bundle approvals");
+  object(completeBundle, "complete bundle", ["schemaVersion", "candidateCommit", "candidateTree", "pathListSha256", "contentLedgerSha256", "migrationLedgerSha256"]);
+  if (completeBundle.schemaVersion !== "bury-p1-complete-bundle-v2" || completeBundle.candidateCommit !== manifest.candidate.commit || completeBundle.candidateTree !== manifest.candidate.tree || completeBundle.pathListSha256 !== manifest.candidate.pathListSha256 || completeBundle.contentLedgerSha256 !== manifest.candidate.contentLedgerSha256 || completeBundle.migrationLedgerSha256 !== manifest.candidate.migrationLedgerSha256) fail("complete bundle cross-record binding");
   if (sha256Json(completeBundle) !== manifest.candidate.completeBundleSha256) fail("complete bundle digest");
-  if (!documentsOnly) validateExistingClaim(claimState, { manifest, manifestSha256: sha256Json(manifest), attestation, approvalByRole, nowMillis });
-  assertPublicValue({ manifest, completeBundle, contentLedger }, "release bundle");
+  if (!documentsOnly) validateExistingClaim(claimState, { manifest, manifestSha256: sha256Json(manifest), attestation, ownerAuthorizationSha256, nowMillis });
+  assertPublicValue({ manifest, ownerAuthorization, completeBundle, contentLedger }, "release bundle");
 
   const checkNames = documentsOnly
-    ? REQUIRED_CHECKS.filter((name) => !["workflowIdentity", "actorBinding", "nativeAttestation", "oneUse"].includes(name))
+    ? REQUIRED_CHECKS.filter((name) => !["workflowIdentity", "nativeAttestation", "oneUse"].includes(name))
     : REQUIRED_CHECKS;
   const checks = Object.fromEntries(checkNames.map((name) => [name, true]));
-  return { ok: true, checks, manifestSha256: sha256Json(manifest), approvals: approvalByRole };
+  return { ok: true, checks, manifestSha256: sha256Json(manifest), ownerAuthorizationSha256 };
 }
 
 export function buildClaim({ manifest, attestation, executor, validation, now }) {
   return {
-    schemaVersion: "bury-p1-consumption-claim-v1",
+    schemaVersion: "bury-p1-consumption-claim-v2",
     authorizationId: manifest.authorization.authorizationId,
     repository: REPOSITORY,
     claimTag: `bury-p1-consumed/${manifest.authorization.authorizationId}`,
     manifestSha256: validation.manifestSha256,
     attestationBundleSha256: attestation.bundleSha256,
     candidateCommit: manifest.candidate.commit,
-    businessApprovalSha256: sha256Json(validation.approvals.get("business-release-owner")),
-    qaReceiptSha256: sha256Json(validation.approvals.get("independent-qa-reviewer")),
+    ownerAuthorizationSha256: validation.ownerAuthorizationSha256,
     executionWindow: structuredClone(manifest.executionWindow),
     workflowRun: {
       repository: REPOSITORY,
@@ -245,19 +267,20 @@ export function buildClaim({ manifest, attestation, executor, validation, now })
     oneUse: true,
     p1Authorized: true,
     g2Authorized: false,
+    productionBookingAuthorized: false,
     issuedAtUtc: now,
   };
 }
 
 function validateReceipt(receipt, { claim, checks, manifest, validation, claimAttestation }) {
-  object(receipt, "receipt", ["schemaVersion", "recordId", "result", "verifiedAtUtc", "repository", "candidateCommit", "manifestSha256", "attestationBundleSha256", "businessApprovalSha256", "qaReceiptSha256", "claim", "finalizerWorkflowRun", "checks", "authorityGrants"]);
-  if (receipt.result !== "PASS" || receipt.schemaVersion !== "bury-p1-verification-receipt-v1" || receipt.recordId !== manifest.recordId || receipt.repository !== REPOSITORY || receipt.candidateCommit !== manifest.candidate.commit || receipt.manifestSha256 !== validation.manifestSha256 || receipt.attestationBundleSha256 !== claimAttestation.bundleSha256 || receipt.businessApprovalSha256 !== claim.businessApprovalSha256 || receipt.qaReceiptSha256 !== claim.qaReceiptSha256) fail("receipt identity/cross-record hash binding");
+  object(receipt, "receipt", ["schemaVersion", "recordId", "result", "verifiedAtUtc", "repository", "candidateCommit", "manifestSha256", "attestationBundleSha256", "ownerAuthorizationSha256", "claim", "finalizerWorkflowRun", "checks", "authorityGrants"]);
+  if (receipt.result !== "PASS" || receipt.schemaVersion !== "bury-p1-verification-receipt-v2" || receipt.recordId !== manifest.recordId || receipt.repository !== REPOSITORY || receipt.candidateCommit !== manifest.candidate.commit || receipt.manifestSha256 !== validation.manifestSha256 || receipt.attestationBundleSha256 !== claimAttestation.bundleSha256 || receipt.ownerAuthorizationSha256 !== claim.ownerAuthorizationSha256) fail("receipt identity/cross-record hash binding");
   const verifiedAt = utcMillis(receipt.verifiedAtUtc, "receipt verification time");
   if (verifiedAt < Date.parse(claim.issuedAtUtc) || verifiedAt > Date.parse(manifest.executionWindow.expiresAtUtc)) fail("receipt verification time is outside the winning claim/window");
   equal(receipt.checks, checks, "receipt mandatory checks");
   if (!receipt.claim || receipt.claim.tag !== claim.claimTag || receipt.claim.claimSha256 !== sha256Json(claim)) fail("receipt claim binding");
   object(receipt.finalizerWorkflowRun, "receipt finalizer workflow", ["repository", "workflow", "ref", "sha", "runId", "runAttempt", "actor", "actorId"]);
-  if (receipt.finalizerWorkflowRun.repository !== REPOSITORY || receipt.finalizerWorkflowRun.workflow !== CONSUMPTION_WORKFLOW || receipt.finalizerWorkflowRun.ref !== "refs/heads/main" || !GIT_SHA.test(receipt.finalizerWorkflowRun.sha) || receipt.finalizerWorkflowRun.actor !== "AlexM999911" || receipt.finalizerWorkflowRun.actorId !== manifest.actors.repositoryExecutor.githubAccountId || !/^[1-9][0-9]{0,19}$/.test(receipt.finalizerWorkflowRun.runId) || !/^[1-9][0-9]{0,9}$/.test(receipt.finalizerWorkflowRun.runAttempt)) fail("receipt finalizer workflow binding");
+  if (receipt.finalizerWorkflowRun.repository !== REPOSITORY || receipt.finalizerWorkflowRun.workflow !== CONSUMPTION_WORKFLOW || receipt.finalizerWorkflowRun.ref !== "refs/heads/main" || !GIT_SHA.test(receipt.finalizerWorkflowRun.sha) || receipt.finalizerWorkflowRun.actor !== OWNER_IDENTITY.githubLogin || receipt.finalizerWorkflowRun.actorId !== OWNER_IDENTITY.githubAccountId || !/^[1-9][0-9]{0,19}$/.test(receipt.finalizerWorkflowRun.runId) || !/^[1-9][0-9]{0,9}$/.test(receipt.finalizerWorkflowRun.runAttempt)) fail("receipt finalizer workflow binding");
   if (!Array.isArray(receipt.authorityGrants) || receipt.authorityGrants.length !== 0) fail("receipt authority grants");
 }
 
@@ -282,7 +305,7 @@ export async function consumeRelease(input) {
   }
 
   const receipt = {
-    schemaVersion: "bury-p1-verification-receipt-v1",
+    schemaVersion: "bury-p1-verification-receipt-v2",
     recordId: manifestRecordId(input.manifest),
     result: "PASS",
     verifiedAtUtc: input.now,
@@ -290,8 +313,7 @@ export async function consumeRelease(input) {
     candidateCommit: input.manifest.candidate.commit,
     manifestSha256: validation.manifestSha256,
     attestationBundleSha256: claimAttestation.bundleSha256,
-    businessApprovalSha256: expectedClaim.businessApprovalSha256,
-    qaReceiptSha256: expectedClaim.qaReceiptSha256,
+    ownerAuthorizationSha256: expectedClaim.ownerAuthorizationSha256,
     claim: { tag: claim.claimTag, claimSha256: sha256Json(claim) },
     finalizerWorkflowRun: {
       repository: REPOSITORY,

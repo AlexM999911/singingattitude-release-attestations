@@ -5,8 +5,8 @@ import { validateReleaseBundle } from "./lib/bury-p1-release-runtime.mjs";
 
 const PATHS = Object.freeze({
   manifest: "manifests/bury-p1-reviewed.json",
-  businessApproval: "approvals/bury-p1-business-release.json",
-  qaApproval: "approvals/bury-p1-independent-qa.json",
+  ownerAuthorization: "authorizations/bury-p1-owner-authorization.json",
+  ownerAuthorizationSidecar: "authorizations/bury-p1-owner-authorization.sha256",
   completeBundle: "manifests/bury-p1-reviewed-complete-bundle.json",
   contentLedger: "manifests/bury-p1-reviewed-content-ledger.json",
   candidateTree: "manifests/bury-p1-reviewed-candidate-tree.json",
@@ -14,9 +14,12 @@ const PATHS = Object.freeze({
 
 export function loadReleaseDocuments({ readFileFn = readFileSync } = {}) {
   const read = (path) => JSON.parse(readFileFn(path, "utf8"));
+  const ownerAuthorizationBytes = readFileFn(PATHS.ownerAuthorization, "utf8");
   return {
     manifest: read(PATHS.manifest),
-    approvals: [read(PATHS.businessApproval), read(PATHS.qaApproval)],
+    ownerAuthorization: JSON.parse(ownerAuthorizationBytes),
+    ownerAuthorizationBytes,
+    ownerAuthorizationSha256Sidecar: readFileFn(PATHS.ownerAuthorizationSidecar, "utf8"),
     completeBundle: read(PATHS.completeBundle),
     contentLedger: read(PATHS.contentLedger),
     candidateTree: read(PATHS.candidateTree),

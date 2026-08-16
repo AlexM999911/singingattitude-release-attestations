@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/AlexM999911/singingattitude-release-attestations/schemas/bury-p1-owner-authorization-v2.schema.json",
+  "title": "Closed Bury P1 owner authorization schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "ownerIdentity", "candidateCommit", "candidateTree", "manifestSha256", "migrationHashes", "executionWindow", "recoveryOwner", "rollbackAuthority", "oneUse", "g2Authorized", "productionBookingAuthorized"],
+  "properties": {
+    "schemaVersion": { "const": "BURY_P1_OWNER_AUTHORIZATION_V2" },
+    "ownerIdentity": { "$ref": "#/$defs/owner" },
+    "candidateCommit": { "$ref": "#/$defs/gitSha" },
+    "candidateTree": { "$ref": "#/$defs/gitSha" },
+    "manifestSha256": { "$ref": "#/$defs/sha256" },
+    "migrationHashes": {
+      "type": "array", "minItems": 1, "maxItems": 16,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["order", "path", "sha256"],
+        "properties": {
+          "order": { "type": "integer", "minimum": 1, "maximum": 16 },
+          "path": { "type": "string", "pattern": "^(tests/sql/bury-acuity-authority/(?:00_baseline|10_p1_noncustomer_identity_approval)\\.sql|supabase/migrations/[0-9]{14}_[a-z0-9_]+\\.sql)$" },
+          "sha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    },
+    "executionWindow": { "$ref": "#/$defs/window" },
+    "recoveryOwner": { "$ref": "#/$defs/owner" },
+    "rollbackAuthority": { "$ref": "#/$defs/owner" },
+    "oneUse": { "const": true },
+    "g2Authorized": { "const": false },
+    "productionBookingAuthorized": { "const": false }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "gitSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "canonicalUtc": { "type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$" },
+    "window": { "type": "object", "additionalProperties": false, "required": ["startsAtUtc", "expiresAtUtc"], "properties": { "startsAtUtc": { "$ref": "#/$defs/canonicalUtc" }, "expiresAtUtc": { "$ref": "#/$defs/canonicalUtc" } } },
+    "owner": { "type": "object", "additionalProperties": false, "required": ["githubLogin", "githubAccountId", "businessOwner", "technicalOwner"], "properties": { "githubLogin": { "const": "AlexM999911" }, "githubAccountId": { "const": "234956861" }, "businessOwner": { "const": true }, "technicalOwner": { "const": true } } }
+  }
+}

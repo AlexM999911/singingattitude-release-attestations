@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/AlexM999911/singingattitude-release-attestations/schemas/bury-p1-verification-receipt-v2.schema.json",
+  "title": "Closed Bury P1 owner verification receipt schema",
+  "type": "object", "additionalProperties": false,
+  "required": ["schemaVersion", "recordId", "result", "verifiedAtUtc", "repository", "candidateCommit", "manifestSha256", "attestationBundleSha256", "ownerAuthorizationSha256", "claim", "finalizerWorkflowRun", "checks", "authorityGrants"],
+  "properties": {
+    "schemaVersion": { "const": "bury-p1-verification-receipt-v2" },
+    "recordId": { "type": "string", "pattern": "^BURY-P1-[A-Z0-9-]{8,120}$" }, "result": { "const": "PASS" },
+    "verifiedAtUtc": { "$ref": "#/$defs/canonicalUtc" }, "repository": { "const": "AlexM999911/singingattitude-release-attestations" },
+    "candidateCommit": { "$ref": "#/$defs/gitSha" }, "manifestSha256": { "$ref": "#/$defs/sha256" },
+    "attestationBundleSha256": { "$ref": "#/$defs/sha256" }, "ownerAuthorizationSha256": { "$ref": "#/$defs/sha256" },
+    "claim": { "type": "object", "additionalProperties": false, "required": ["tag", "claimSha256"], "properties": { "tag": { "type": "string", "pattern": "^bury-p1-consumed/BURY-P1-[A-Z0-9-]{8,120}$" }, "claimSha256": { "$ref": "#/$defs/sha256" } } },
+    "finalizerWorkflowRun": { "$ref": "#/$defs/workflowRun" },
+    "checks": { "type": "object", "additionalProperties": false, "required": ["repositoryIdentity", "workflowIdentity", "candidateBinding", "manifestBinding", "contentLedgerBinding", "migrationLedgerBinding", "ownerAuthorization", "ownerIdentity", "executionWindow", "nativeAttestation", "oneUse", "g2Locked", "productionBookingLocked", "recoveryAuthority", "rollbackAuthority"], "properties": { "repositoryIdentity": { "const": true }, "workflowIdentity": { "const": true }, "candidateBinding": { "const": true }, "manifestBinding": { "const": true }, "contentLedgerBinding": { "const": true }, "migrationLedgerBinding": { "const": true }, "ownerAuthorization": { "const": true }, "ownerIdentity": { "const": true }, "executionWindow": { "const": true }, "nativeAttestation": { "const": true }, "oneUse": { "const": true }, "g2Locked": { "const": true }, "productionBookingLocked": { "const": true }, "recoveryAuthority": { "const": true }, "rollbackAuthority": { "const": true } } },
+    "authorityGrants": { "type": "array", "maxItems": 0 }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "gitSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "canonicalUtc": { "type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$" },
+    "workflowRun": { "type": "object", "additionalProperties": false, "required": ["repository", "workflow", "ref", "sha", "runId", "runAttempt", "actor", "actorId"], "properties": { "repository": { "const": "AlexM999911/singingattitude-release-attestations" }, "workflow": { "const": ".github/workflows/bury-p1-one-use-consumption.yml" }, "ref": { "const": "refs/heads/main" }, "sha": { "$ref": "#/$defs/gitSha" }, "runId": { "type": "string", "pattern": "^[1-9][0-9]{0,19}$" }, "runAttempt": { "type": "string", "pattern": "^[1-9][0-9]{0,9}$" }, "actor": { "const": "AlexM999911" }, "actorId": { "const": "234956861" } } }
+  }
+}

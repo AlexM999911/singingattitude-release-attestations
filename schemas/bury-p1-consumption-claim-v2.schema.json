@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/AlexM999911/singingattitude-release-attestations/schemas/bury-p1-consumption-claim-v2.schema.json",
+  "title": "Closed Bury P1 owner claim schema",
+  "type": "object", "additionalProperties": false,
+  "required": ["schemaVersion", "authorizationId", "repository", "claimTag", "manifestSha256", "attestationBundleSha256", "candidateCommit", "ownerAuthorizationSha256", "executionWindow", "workflowRun", "oneUse", "p1Authorized", "g2Authorized", "productionBookingAuthorized", "issuedAtUtc"],
+  "properties": {
+    "schemaVersion": { "const": "bury-p1-consumption-claim-v2" },
+    "authorizationId": { "type": "string", "pattern": "^BURY-P1-[A-Z0-9-]{8,120}$" },
+    "repository": { "const": "AlexM999911/singingattitude-release-attestations" },
+    "claimTag": { "type": "string", "pattern": "^bury-p1-consumed/BURY-P1-[A-Z0-9-]{8,120}$" },
+    "manifestSha256": { "$ref": "#/$defs/sha256" }, "attestationBundleSha256": { "$ref": "#/$defs/sha256" },
+    "candidateCommit": { "$ref": "#/$defs/gitSha" }, "ownerAuthorizationSha256": { "$ref": "#/$defs/sha256" },
+    "executionWindow": { "$ref": "#/$defs/window" },
+    "workflowRun": { "$ref": "#/$defs/workflowRun" },
+    "oneUse": { "const": true }, "p1Authorized": { "const": true }, "g2Authorized": { "const": false },
+    "productionBookingAuthorized": { "const": false }, "issuedAtUtc": { "$ref": "#/$defs/canonicalUtc" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "gitSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "canonicalUtc": { "type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$" },
+    "window": { "type": "object", "additionalProperties": false, "required": ["startsAtUtc", "expiresAtUtc"], "properties": { "startsAtUtc": { "$ref": "#/$defs/canonicalUtc" }, "expiresAtUtc": { "$ref": "#/$defs/canonicalUtc" } } },
+    "workflowRun": { "type": "object", "additionalProperties": false, "required": ["repository", "workflow", "ref", "sha", "runId", "runAttempt", "actor", "actorId"], "properties": { "repository": { "const": "AlexM999911/singingattitude-release-attestations" }, "workflow": { "const": ".github/workflows/bury-p1-one-use-consumption.yml" }, "ref": { "const": "refs/heads/main" }, "sha": { "$ref": "#/$defs/gitSha" }, "runId": { "type": "string", "pattern": "^[1-9][0-9]{0,19}$" }, "runAttempt": { "type": "string", "pattern": "^[1-9][0-9]{0,9}$" }, "actor": { "const": "AlexM999911" }, "actorId": { "const": "234956861" } } }
+  }
+}
