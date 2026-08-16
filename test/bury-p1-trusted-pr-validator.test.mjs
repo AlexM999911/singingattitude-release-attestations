@@ -37,7 +37,7 @@ const trustedPolicy = {
   allowedPathPatterns: [
     "^README\\.md$",
     "^SECURITY\\.md$",
-    "^schemas/bury-p1-[a-z0-9-]+-v1\\.schema\\.json$",
+    "^schemas/bury-p1-[a-z0-9-]+-v2\\.schema\\.json$",
     "^\\.github/workflows/bury-p1-(?:manifest-validation|native-attestation|one-use-consumption)\\.yml$",
   ],
   reservedWorkflowPaths: [
@@ -120,127 +120,8 @@ function safeWorkflow({ actions, permissions, triggers, environment, contract })
 }
 
 function safeSchema(contract) {
-  const closedObject = (nested) => ({
-    type: "object",
-    additionalProperties: false,
-    required: Object.keys(nested),
-    properties: nested,
-  });
-  const ref = (name) => ({ $ref: `#/$defs/${name}` });
-  const properties = Object.fromEntries(
-    contract.requiredRootProperties.map((key) => [key, { type: "string" }]),
-  );
-  const defs = {
-    sha256: { type: "string", pattern: "^[0-9a-f]{64}$" },
-    gitSha: { type: "string", pattern: "^[0-9a-f]{40}$" },
-    canonicalUtc: {
-      type: "string",
-      pattern: "^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$",
-    },
-  };
-  if (["attestation-manifest", "consumption-claim"].includes(contract.schemaProfile)) {
-    defs.window = closedObject({ startsAtUtc: ref("canonicalUtc"), expiresAtUtc: ref("canonicalUtc") });
-  }
-  if (contract.schemaProfile === "attestation-manifest") {
-    Object.assign(properties, {
-      schemaVersion: { const: "bury-p1-attestation-manifest-v1" },
-      recordId: { type: "string", pattern: "^BURY-P1-[A-Z0-9-]{8,120}$" },
-      trustModel: { const: "BURY-P1-MODE-A-GITHUB-ATTESTATION-WITH-EXTERNAL-HUMAN-APPROVALS-V1" },
-      repository: { const: repository },
-      authorization: closedObject({
-        authorizationId: { type: "string", pattern: "^BURY-P1-[A-Z0-9-]{8,120}$" },
-        oneUse: { const: true }, p1Authorized: { const: true }, g2Authorized: { const: false },
-      }),
-      candidate: closedObject({
-        commit: ref("gitSha"), tree: ref("gitSha"), pathListSha256: ref("sha256"),
-        contentLedgerSha256: ref("sha256"), completeBundleSha256: ref("sha256"), migrationLedgerSha256: ref("sha256"),
-      }),
-      target: closedObject({
-        profile: { const: "isolated-localhost-disposable-v1" },
-        reference: { type: "string", pattern: "^local-supabase://[a-z0-9-]{8,96}$" },
-        nonProduction: { const: true }, noCustomerData: { const: true }, exclusiveLocalhost: { const: true },
-      }),
-      executionWindow: ref("window"),
-      migrations: {
-        type: "array", minItems: 1, maxItems: 16,
-        items: closedObject({
-          order: { type: "integer", minimum: 1, maximum: 16 },
-          path: { type: "string", pattern: "^(tests/sql/bury-acuity-authority/00_baseline\\.sql|supabase/migrations/[0-9]{14}_[a-z0-9_]+\\.sql)$" },
-          sha256: ref("sha256"),
-        }),
-      },
-      approvals: { type: "array", minItems: 2, maxItems: 2, items: closedObject({ authorityRole: { enum: ["business-release-owner", "independent-qa-reviewer"] }, sha256: ref("sha256") }) },
-      actors: closedObject({
-        repositoryExecutor: closedObject({
-          githubLogin: { type: "string", pattern: "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$" },
-          githubAccountId: { type: "string", pattern: "^[1-9][0-9]{0,19}$" },
-        }),
-        businessReleaseEvidenceReference: { type: "string", pattern: "^BURY-[A-Z0-9][A-Z0-9/._:-]{7,200}$" },
-        independentQaEvidenceReference: { type: "string", pattern: "^BURY-[A-Z0-9][A-Z0-9/._:-]{7,200}$" },
-      }),
-      boundaries: closedObject(Object.fromEntries(
-        ["production", "providers", "payments", "email", "deployment", "publicBooking", "g2"].map((key) => [key, { const: false }]),
-      )),
-    });
-  } else if (contract.schemaProfile === "consumption-claim") {
-    Object.assign(properties, {
-      schemaVersion: { const: "bury-p1-consumption-claim-v1" },
-      authorizationId: { type: "string", pattern: "^BURY-P1-[A-Z0-9-]{8,120}$" },
-      repository: { const: repository },
-      claimTag: { type: "string", pattern: "^bury-p1-consumed/BURY-P1-[A-Z0-9-]{8,120}$" },
-      manifestSha256: ref("sha256"), attestationBundleSha256: ref("sha256"), candidateCommit: ref("gitSha"),
-      businessApprovalSha256: ref("sha256"), qaReceiptSha256: ref("sha256"), executionWindow: ref("window"),
-      workflowRun: closedObject({
-        repository: { const: repository }, workflow: { const: ".github/workflows/bury-p1-one-use-consumption.yml" },
-        ref: { const: "refs/heads/main" }, sha: ref("gitSha"),
-        runId: { type: "string", pattern: "^[1-9][0-9]{0,19}$" },
-        runAttempt: { type: "string", pattern: "^[1-9][0-9]{0,9}$" },
-        actor: { type: "string", pattern: "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$" },
-        actorId: { type: "string", pattern: "^[1-9][0-9]{0,19}$" },
-      }),
-      oneUse: { const: true }, p1Authorized: { const: true }, g2Authorized: { const: false }, issuedAtUtc: ref("canonicalUtc"),
-    });
-  } else if (contract.schemaProfile === "external-approval-reference") {
-    Object.assign(properties, {
-      schemaVersion: { const: "bury-p1-external-approval-reference-v1" },
-      authorityRole: { enum: ["business-release-owner", "independent-qa-reviewer"] },
-      decision: { enum: ["APPROVED", "PASS"] },
-      evidenceReference: { type: "string", pattern: "^BURY-[A-Z0-9][A-Z0-9/._:-]{7,200}$" },
-      evidenceSha256: ref("sha256"), acceptedAtUtc: ref("canonicalUtc"), validUntilUtc: ref("canonicalUtc"),
-      subjectCommit: ref("gitSha"), subjectCandidateLedgerSha256: ref("sha256"), authorityGrants: { type: "array", maxItems: 0 },
-    });
-  } else if (contract.schemaProfile === "verification-receipt") {
-    Object.assign(properties, {
-      schemaVersion: { const: "bury-p1-verification-receipt-v1" },
-      recordId: { type: "string", pattern: "^BURY-P1-[A-Z0-9-]{8,120}$" }, result: { const: "PASS" },
-      verifiedAtUtc: ref("canonicalUtc"), repository: { const: repository }, candidateCommit: ref("gitSha"),
-      manifestSha256: ref("sha256"), attestationBundleSha256: ref("sha256"), businessApprovalSha256: ref("sha256"), qaReceiptSha256: ref("sha256"),
-      claim: closedObject({ tag: { type: "string", pattern: "^bury-p1-consumed/BURY-P1-[A-Z0-9-]{8,120}$" }, claimSha256: ref("sha256") }),
-      finalizerWorkflowRun: closedObject({
-        repository: { const: repository }, workflow: { const: ".github/workflows/bury-p1-one-use-consumption.yml" }, ref: { const: "refs/heads/main" },
-        sha: ref("gitSha"), runId: { type: "string", pattern: "^[1-9][0-9]{0,19}$" }, runAttempt: { type: "string", pattern: "^[1-9][0-9]{0,9}$" },
-        actor: { type: "string", pattern: "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$" }, actorId: { type: "string", pattern: "^[1-9][0-9]{0,19}$" },
-      }),
-      authorityGrants: { type: "array", maxItems: 0 },
-    });
-  }
-  if (contract.requiredTrueCheckProperties.length > 0) {
-    properties.checks = closedObject(
-      Object.fromEntries(
-        contract.requiredTrueCheckProperties.map((key) => [key, { const: true }]),
-      ),
-    );
-  }
-  return `${JSON.stringify({
-    $schema: "https://json-schema.org/draft/2020-12/schema",
-    $id: contract.schemaId,
-    title: "Closed Bury P1 schema",
-    type: "object",
-    additionalProperties: false,
-    required: contract.requiredRootProperties,
-    properties,
-    $defs: defs,
-  })}\n`;
+  const filename = contract.schemaId.split("/").at(-1);
+  return readFileSync(new URL(`../schemas/${filename}`, import.meta.url), "utf8");
 }
 
 function snapshotFor(files) {
@@ -645,7 +526,7 @@ test("rejects workflows outside their immutable path-specific semantic contracts
 });
 
 test("requires path-specific closed JSON contracts and rejects encoded custom credentials", () => {
-  const path = "schemas/bury-p1-attestation-manifest-v1.schema.json";
+  const path = "schemas/bury-p1-attestation-manifest-v2.schema.json";
   const repositoryPolicy = JSON.parse(readFileSync(repositoryPolicyPath, "utf8"));
   const contract = repositoryPolicy.trustedPullRequestValidation.approvedJsonContracts[path];
   const safe = safeSchema(contract);
@@ -684,7 +565,7 @@ test("requires path-specific closed JSON contracts and rejects encoded custom cr
 test("rejects a verification receipt schema with optional claims or non-true checks", () => {
   const repositoryPolicy = JSON.parse(readFileSync(repositoryPolicyPath, "utf8"));
   const policy = repositoryPolicy.trustedPullRequestValidation;
-  const path = "schemas/bury-p1-verification-receipt-v1.schema.json";
+  const path = "schemas/bury-p1-verification-receipt-v2.schema.json";
   const contract = policy.approvedJsonContracts[path];
   const schema = JSON.parse(safeSchema(contract));
   schema.required = schema.required.filter((key) => key !== "claim");
@@ -759,16 +640,16 @@ test("rejects semantic weakening of identities, authorization locks, hashes, and
   const repositoryPolicy = JSON.parse(readFileSync(repositoryPolicyPath, "utf8"));
   const policy = repositoryPolicy.trustedPullRequestValidation;
   const cases = [
-    ["schemas/bury-p1-attestation-manifest-v1.schema.json", (schema) => {
+    ["schemas/bury-p1-attestation-manifest-v2.schema.json", (schema) => {
       schema.properties.repository = { type: "string" };
     }],
-    ["schemas/bury-p1-consumption-claim-v1.schema.json", (schema) => {
+    ["schemas/bury-p1-consumption-claim-v2.schema.json", (schema) => {
       schema.properties.g2Authorized = { const: true };
     }],
-    ["schemas/bury-p1-external-approval-reference-v1.schema.json", (schema) => {
-      schema.properties.authorityGrants.maxItems = 1;
+    ["schemas/bury-p1-owner-authorization-v2.schema.json", (schema) => {
+      schema.properties.productionBookingAuthorized = { const: true };
     }],
-    ["schemas/bury-p1-verification-receipt-v1.schema.json", (schema) => {
+    ["schemas/bury-p1-verification-receipt-v2.schema.json", (schema) => {
       schema.properties.candidateCommit = { type: "string" };
     }],
   ];

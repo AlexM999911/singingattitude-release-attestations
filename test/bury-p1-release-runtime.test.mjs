@@ -5,6 +5,8 @@ import test from "node:test";
 import {
   canonicalJson,
   consumeRelease,
+  OWNER_IDENTITY,
+  ownerAuthorizationSidecar,
   sha256Json,
   validateReleaseBundle,
 } from "../scripts/lib/bury-p1-release-runtime.mjs";
@@ -13,6 +15,7 @@ import {
   verifyAnyNativeAttestation,
   verifyNativeAttestation,
 } from "../scripts/consume-bury-p1-release.mjs";
+import { loadReleaseDocuments } from "../scripts/validate-bury-p1-release-bundle.mjs";
 import { validatePullRequestSnapshot } from "../scripts/lib/bury-p1-trusted-pr-validator.mjs";
 import { main as activationProbeMain, runActivationProbe } from "../scripts/run-bury-p1-activation-probe.mjs";
 
@@ -36,55 +39,25 @@ function fixture() {
   };
   const contentLedgerSha256 = sha256Json(contentLedger);
   const migrationLedgerSha256 = sha256Json(entries);
-  const approvals = [
-    {
-      schemaVersion: "bury-p1-external-approval-reference-v1",
-      authorityRole: "business-release-owner",
-      decision: "APPROVED",
-      evidenceReference: "BURY-LIUBA/RELEASE/20260814",
-      evidenceSha256: "3".repeat(64),
-      acceptedAtUtc: "2026-08-14T10:00:00Z",
-      validUntilUtc: "2026-08-14T14:00:00Z",
-      subjectCommit: COMMIT,
-      subjectCandidateLedgerSha256: contentLedgerSha256,
-      authorityGrants: [],
-    },
-    {
-      schemaVersion: "bury-p1-external-approval-reference-v1",
-      authorityRole: "independent-qa-reviewer",
-      decision: "PASS",
-      evidenceReference: "BURY-MATTHEW/QA/20260814",
-      evidenceSha256: "4".repeat(64),
-      acceptedAtUtc: "2026-08-14T10:30:00Z",
-      validUntilUtc: "2026-08-14T14:00:00Z",
-      subjectCommit: COMMIT,
-      subjectCandidateLedgerSha256: contentLedgerSha256,
-      authorityGrants: [],
-    },
-  ];
-  const approvalReferences = approvals.map((approval) => ({
-    authorityRole: approval.authorityRole,
-    sha256: sha256Json(approval),
-  }));
   const completeBundle = {
-    schemaVersion: "bury-p1-complete-bundle-v1",
+    schemaVersion: "bury-p1-complete-bundle-v2",
     candidateCommit: COMMIT,
     candidateTree: TREE,
     pathListSha256,
     contentLedgerSha256,
     migrationLedgerSha256,
-    approvalReferences,
   };
   const manifest = {
-    schemaVersion: "bury-p1-attestation-manifest-v1",
+    schemaVersion: "bury-p1-attestation-manifest-v2",
     recordId: "BURY-P1-REVIEWED-20260814",
-    trustModel: "BURY-P1-MODE-A-GITHUB-ATTESTATION-WITH-EXTERNAL-HUMAN-APPROVALS-V1",
+    trustModel: "BURY-P1-MODE-A-GITHUB-ATTESTATION-SINGLE-OWNER-V2",
     repository: REPOSITORY,
     authorization: {
       authorizationId: "BURY-P1-REVIEWED-20260814",
       oneUse: true,
       p1Authorized: true,
       g2Authorized: false,
+      productionBookingAuthorized: false,
     },
     candidate: {
       commit: COMMIT,
@@ -106,12 +79,7 @@ function fixture() {
       expiresAtUtc: "2026-08-14T13:00:00Z",
     },
     migrations: entries.map((entry, index) => ({ order: index + 1, ...entry })),
-    approvals: approvalReferences,
-    actors: {
-      repositoryExecutor: { githubLogin: "AlexM999911", githubAccountId: "123456789" },
-      businessReleaseEvidenceReference: approvals[0].evidenceReference,
-      independentQaEvidenceReference: approvals[1].evidenceReference,
-    },
+    owner: structuredClone(OWNER_IDENTITY),
     boundaries: {
       production: false,
       providers: false,
@@ -123,9 +91,24 @@ function fixture() {
     },
   };
   const manifestSha256 = sha256Json(manifest);
+  const ownerAuthorization = {
+    schemaVersion: "BURY_P1_OWNER_AUTHORIZATION_V2",
+    ownerIdentity: structuredClone(OWNER_IDENTITY),
+    candidateCommit: COMMIT,
+    candidateTree: TREE,
+    manifestSha256,
+    migrationHashes: structuredClone(manifest.migrations),
+    executionWindow: structuredClone(manifest.executionWindow),
+    recoveryOwner: structuredClone(OWNER_IDENTITY),
+    rollbackAuthority: structuredClone(OWNER_IDENTITY),
+    oneUse: true,
+    g2Authorized: false,
+    productionBookingAuthorized: false,
+  };
+  const ownerAuthorizationBytes = `${JSON.stringify(ownerAuthorization, null, 2)}\n`;
   const executor = {
     login: "AlexM999911",
-    id: "123456789",
+    id: OWNER_IDENTITY.githubAccountId,
     repository: REPOSITORY,
     workflowPath: ".github/workflows/bury-p1-one-use-consumption.yml",
     ref: "refs/heads/main",
@@ -147,23 +130,50 @@ function fixture() {
     predicateType: "https://slsa.dev/provenance/v1",
     bundleSha256: "5".repeat(64),
   };
-  return { manifest, approvals, completeBundle, contentLedger, candidateTree: { commit: COMMIT, tree: TREE, entries }, executor, attestation };
+  return { manifest, ownerAuthorization, ownerAuthorizationBytes, ownerAuthorizationSha256Sidecar: ownerAuthorizationSidecar(ownerAuthorizationBytes), completeBundle, contentLedger, candidateTree: { commit: COMMIT, tree: TREE, entries }, executor, attestation };
 }
 
-test("validates every authority, candidate, ledger, actor, window, attestation and unused-claim binding", () => {
+test("validates Alex owner authority, candidate, ledger, window, attestation and unused-claim binding", () => {
   const value = fixture();
   const result = validateReleaseBundle({ ...value, now: NOW, claimState: null });
   assert.equal(result.ok, true);
   assert.deepEqual(Object.values(result.checks), Array(Object.keys(result.checks).length).fill(true));
 });
 
-test("fails closed for each of the five-finding cross-record controls", () => {
+test("release document loader reads only the V2 owner authorization and exact-byte sidecar", () => {
+  const value = fixture();
+  const documents = new Map([
+    ["manifests/bury-p1-reviewed.json", `${JSON.stringify(value.manifest)}\n`],
+    ["authorizations/bury-p1-owner-authorization.json", value.ownerAuthorizationBytes],
+    ["authorizations/bury-p1-owner-authorization.sha256", value.ownerAuthorizationSha256Sidecar],
+    ["manifests/bury-p1-reviewed-complete-bundle.json", `${JSON.stringify(value.completeBundle)}\n`],
+    ["manifests/bury-p1-reviewed-content-ledger.json", `${JSON.stringify(value.contentLedger)}\n`],
+    ["manifests/bury-p1-reviewed-candidate-tree.json", `${JSON.stringify(value.candidateTree)}\n`],
+  ]);
+  const reads = [];
+  const loaded = loadReleaseDocuments({ readFileFn: (path) => {
+    reads.push(path);
+    if (!documents.has(path)) throw new Error(`unexpected path: ${path}`);
+    return documents.get(path);
+  } });
+  assert.deepEqual(loaded.ownerAuthorization, value.ownerAuthorization);
+  assert.equal(loaded.ownerAuthorizationBytes, value.ownerAuthorizationBytes);
+  assert.equal(loaded.ownerAuthorizationSha256Sidecar, value.ownerAuthorizationSha256Sidecar);
+  assert.equal(reads.some((path) => path.startsWith("approvals/")), false);
+  assert.doesNotThrow(() => validateReleaseBundle({ ...loaded, now: NOW, documentsOnly: true }));
+});
+
+test("fails closed for owner, candidate, manifest, expiry, replay, and scope drift", () => {
   const mutations = [
     ["manifest authority", (v) => { v.manifest.authorization.p1Authorized = false; }],
     ["candidate tree", (v) => { v.candidateTree.tree = "d".repeat(40); }],
     ["content ledger", (v) => { v.contentLedger.entries[0].sha256 = "e".repeat(64); }],
-    ["business approval", (v) => { v.approvals[0].subjectCommit = "f".repeat(40); }],
-    ["QA decision", (v) => { v.approvals[1].decision = "BLOCKED"; }],
+    ["owner candidate", (v) => { v.ownerAuthorization.candidateCommit = "f".repeat(40); }],
+    ["owner manifest", (v) => { v.ownerAuthorization.manifestSha256 = "4".repeat(64); }],
+    ["owner expiry", (v) => { v.ownerAuthorization.executionWindow.expiresAtUtc = "2026-08-14T11:30:00Z"; }],
+    ["owner G2", (v) => { v.ownerAuthorization.g2Authorized = true; }],
+    ["owner production booking", (v) => { v.ownerAuthorization.productionBookingAuthorized = true; }],
+    ["owner sidecar", (v) => { v.ownerAuthorizationSha256Sidecar = `${"0".repeat(64)}  authorizations/bury-p1-owner-authorization.json\n`; }],
     ["actor", (v) => { v.executor.login = "mallory"; }],
     ["window", (v) => { v.manifest.executionWindow.expiresAtUtc = "2026-08-14T11:30:00Z"; }],
     ["attestation issuer", (v) => { v.attestation.issuer = "https://evil.invalid"; }],
@@ -250,8 +260,7 @@ test("forged PASS receipt fields and hostile winning-claim provenance are reject
     (r) => { r.candidateCommit = "9".repeat(40); },
     (r) => { r.manifestSha256 = "9".repeat(64); },
     (r) => { r.attestationBundleSha256 = "9".repeat(64); },
-    (r) => { r.businessApprovalSha256 = "9".repeat(64); },
-    (r) => { r.qaReceiptSha256 = "9".repeat(64); },
+    (r) => { r.ownerAuthorizationSha256 = "9".repeat(64); },
     (r) => { r.verifiedAtUtc = "2026-08-15T12:00:00Z"; },
     (r) => { r.finalizerWorkflowRun.actor = "mallory"; },
     (r) => { r.finalizerWorkflowRun.runId = "0"; },
@@ -375,14 +384,14 @@ test("trusted PR validation accepts only a complete executable cross-record rele
     ["manifests/bury-p1-reviewed-complete-bundle.json", value.completeBundle],
     ["manifests/bury-p1-reviewed-content-ledger.json", value.contentLedger],
     ["manifests/bury-p1-reviewed-candidate-tree.json", value.candidateTree],
-    ["approvals/bury-p1-business-release.json", value.approvals[0]],
-    ["approvals/bury-p1-independent-qa.json", value.approvals[1]],
+    ["authorizations/bury-p1-owner-authorization.json", value.ownerAuthorizationBytes],
+    ["authorizations/bury-p1-owner-authorization.sha256", value.ownerAuthorizationSha256Sidecar],
   ];
   const policy = JSON.parse(readFileSync(new URL("../policy/bury-p1-public-content-policy-v1.json", import.meta.url), "utf8")).trustedPullRequestValidation;
   const makeSnapshot = (selected) => {
     const tree = []; const compare = []; const blobs = {};
     selected.forEach(([path, record], index) => {
-      const content = `${JSON.stringify(record)}\n`;
+      const content = typeof record === "string" ? record : `${JSON.stringify(record)}\n`;
       const sha = String(index + 3).repeat(40).slice(0, 40);
       tree.push({ path, mode: "100644", type: "blob", sha, size: Buffer.byteLength(content) });
       compare.push({ filename: path, status: "added", sha });

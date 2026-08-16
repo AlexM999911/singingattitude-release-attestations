@@ -1,6 +1,6 @@
 {
   "schemaVersion": "bury-p1-public-content-policy-v1",
-  "trustModel": "BURY-P1-MODE-A-GITHUB-ATTESTATION-WITH-EXTERNAL-HUMAN-APPROVALS-V1",
+  "trustModel": "BURY-P1-MODE-A-GITHUB-ATTESTATION-SINGLE-OWNER-V2",
   "repositoryScope": "public-attestation-only",
   "allow": [
     "deterministic release manifests",
@@ -9,7 +9,7 @@
     "content-ledger hashes",
     "complete-bundle hashes",
     "migration, preflight, and read-back filenames, order, and hashes",
-    "non-sensitive approval and QA evidence references and SHA-256 values",
+    "Alex owner authorization receipts and SHA-256 sidecars",
     "policy and JSON Schema files",
     "credentialless GitHub Actions workflows",
     "GitHub-native attestation bundles",
@@ -31,7 +31,8 @@
   ],
   "controls": {
     "attestationOnly": true,
-    "humanApprovalsExternal": true,
+    "singleOwnerAuthorization": true,
+    "ownerAuthorizationSidecarRequired": true,
     "noCustomPrivateSigningKeys": true,
     "noEnvironmentSecrets": true,
     "noRepositorySecrets": true,
@@ -83,9 +84,9 @@
     "allowedPathPatterns": [
       "^README\\.md$",
       "^SECURITY\\.md$",
-      "^schemas/bury-p1-[a-z0-9-]+-v1\\.schema\\.json$",
+      "^schemas/bury-p1-[a-z0-9-]+-v2\\.schema\\.json$",
       "^manifests/bury-p1-reviewed(?:-complete-bundle|-content-ledger|-candidate-tree)?\\.json$",
-      "^approvals/bury-p1-(?:business-release|independent-qa)\\.json$",
+      "^authorizations/bury-p1-owner-authorization\\.(?:json|sha256)$",
       "^\\.github/workflows/bury-p1-(?:manifest-validation|native-attestation|one-use-consumption)\\.yml$"
     ],
     "reservedWorkflowPaths": [
@@ -176,29 +177,29 @@
     },
     "jsonContractMode": "IMMUTABLE_PATH_SPECIFIC_CLOSED_JSON_SCHEMA",
     "approvedJsonContracts": {
-      "schemas/bury-p1-attestation-manifest-v1.schema.json": {
-        "schemaProfile": "attestation-manifest",
-        "schemaId": "https://github.com/AlexM999911/singingattitude-release-attestations/schemas/bury-p1-attestation-manifest-v1.schema.json",
-        "requiredRootProperties": ["schemaVersion", "recordId", "trustModel", "repository", "authorization", "candidate", "target", "executionWindow", "migrations", "approvals", "actors", "boundaries"],
+      "schemas/bury-p1-attestation-manifest-v2.schema.json": {
+        "schemaProfile": "attestation-manifest-v2",
+        "schemaId": "https://github.com/AlexM999911/singingattitude-release-attestations/schemas/bury-p1-attestation-manifest-v2.schema.json",
+        "requiredRootProperties": ["schemaVersion", "recordId", "trustModel", "repository", "authorization", "candidate", "target", "executionWindow", "migrations", "owner", "boundaries"],
         "requiredTrueCheckProperties": []
       },
-      "schemas/bury-p1-consumption-claim-v1.schema.json": {
-        "schemaProfile": "consumption-claim",
-        "schemaId": "https://github.com/AlexM999911/singingattitude-release-attestations/schemas/bury-p1-consumption-claim-v1.schema.json",
-        "requiredRootProperties": ["schemaVersion", "authorizationId", "repository", "claimTag", "manifestSha256", "attestationBundleSha256", "candidateCommit", "businessApprovalSha256", "qaReceiptSha256", "executionWindow", "workflowRun", "oneUse", "p1Authorized", "g2Authorized", "issuedAtUtc"],
+      "schemas/bury-p1-owner-authorization-v2.schema.json": {
+        "schemaProfile": "owner-authorization-v2",
+        "schemaId": "https://github.com/AlexM999911/singingattitude-release-attestations/schemas/bury-p1-owner-authorization-v2.schema.json",
+        "requiredRootProperties": ["schemaVersion", "ownerIdentity", "candidateCommit", "candidateTree", "manifestSha256", "migrationHashes", "executionWindow", "recoveryOwner", "rollbackAuthority", "oneUse", "g2Authorized", "productionBookingAuthorized"],
         "requiredTrueCheckProperties": []
       },
-      "schemas/bury-p1-external-approval-reference-v1.schema.json": {
-        "schemaProfile": "external-approval-reference",
-        "schemaId": "https://github.com/AlexM999911/singingattitude-release-attestations/schemas/bury-p1-external-approval-reference-v1.schema.json",
-        "requiredRootProperties": ["schemaVersion", "authorityRole", "decision", "evidenceReference", "evidenceSha256", "acceptedAtUtc", "validUntilUtc", "subjectCommit", "subjectCandidateLedgerSha256", "authorityGrants"],
+      "schemas/bury-p1-consumption-claim-v2.schema.json": {
+        "schemaProfile": "consumption-claim-v2",
+        "schemaId": "https://github.com/AlexM999911/singingattitude-release-attestations/schemas/bury-p1-consumption-claim-v2.schema.json",
+        "requiredRootProperties": ["schemaVersion", "authorizationId", "repository", "claimTag", "manifestSha256", "attestationBundleSha256", "candidateCommit", "ownerAuthorizationSha256", "executionWindow", "workflowRun", "oneUse", "p1Authorized", "g2Authorized", "productionBookingAuthorized", "issuedAtUtc"],
         "requiredTrueCheckProperties": []
       },
-      "schemas/bury-p1-verification-receipt-v1.schema.json": {
-        "schemaProfile": "verification-receipt",
-        "schemaId": "https://github.com/AlexM999911/singingattitude-release-attestations/schemas/bury-p1-verification-receipt-v1.schema.json",
-        "requiredRootProperties": ["schemaVersion", "recordId", "result", "verifiedAtUtc", "repository", "candidateCommit", "manifestSha256", "attestationBundleSha256", "businessApprovalSha256", "qaReceiptSha256", "claim", "finalizerWorkflowRun", "checks", "authorityGrants"],
-        "requiredTrueCheckProperties": ["repositoryIdentity", "workflowIdentity", "candidateBinding", "manifestBinding", "contentLedgerBinding", "migrationLedgerBinding", "externalApprovals", "actorBinding", "executionWindow", "nativeAttestation", "oneUse", "g2Locked"]
+      "schemas/bury-p1-verification-receipt-v2.schema.json": {
+        "schemaProfile": "verification-receipt-v2",
+        "schemaId": "https://github.com/AlexM999911/singingattitude-release-attestations/schemas/bury-p1-verification-receipt-v2.schema.json",
+        "requiredRootProperties": ["schemaVersion", "recordId", "result", "verifiedAtUtc", "repository", "candidateCommit", "manifestSha256", "attestationBundleSha256", "ownerAuthorizationSha256", "claim", "finalizerWorkflowRun", "checks", "authorityGrants"],
+        "requiredTrueCheckProperties": ["repositoryIdentity", "workflowIdentity", "candidateBinding", "manifestBinding", "contentLedgerBinding", "migrationLedgerBinding", "ownerAuthorization", "ownerIdentity", "executionWindow", "nativeAttestation", "oneUse", "g2Locked", "productionBookingLocked", "recoveryAuthority", "rollbackAuthority"]
       }
     },
     "requiredWorkflowEnforcement": {

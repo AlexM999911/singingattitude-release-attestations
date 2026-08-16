@@ -492,15 +492,13 @@ function inspectSchemaProfile(file, parsed, contract, errors) {
     pattern: "^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$",
   };
   const ref = (name) => ({ $ref: `#/$defs/${name}` });
-  const expected = {
-    schemaVersion: { const: `bury-p1-${contract.schemaProfile}-v1` },
-  };
+  const expected = { schemaVersion: { const: `bury-p1-${contract.schemaProfile}-v2` } };
 
-  if (contract.schemaProfile === "attestation-manifest") {
-    expected.schemaVersion = { const: "bury-p1-attestation-manifest-v1" };
+  if (contract.schemaProfile === "attestation-manifest-v2") {
+    expected.schemaVersion = { const: "bury-p1-attestation-manifest-v2" };
     Object.assign(expected, {
       recordId: { type: "string", pattern: "^BURY-P1-[A-Z0-9-]{8,120}$" },
-      trustModel: { const: "BURY-P1-MODE-A-GITHUB-ATTESTATION-WITH-EXTERNAL-HUMAN-APPROVALS-V1" },
+      trustModel: { const: "BURY-P1-MODE-A-GITHUB-ATTESTATION-SINGLE-OWNER-V2" },
       repository: { const: "AlexM999911/singingattitude-release-attestations" },
       authorization: {
         type: "object",
@@ -510,6 +508,7 @@ function inspectSchemaProfile(file, parsed, contract, errors) {
           oneUse: { const: true },
           p1Authorized: { const: true },
           g2Authorized: { const: false },
+          productionBookingAuthorized: { const: false },
         },
       },
       candidate: {
@@ -547,41 +546,13 @@ function inspectSchemaProfile(file, parsed, contract, errors) {
             order: { type: "integer", minimum: 1, maximum: 16 },
             path: {
               type: "string",
-              pattern: "^(tests/sql/bury-acuity-authority/00_baseline\\.sql|supabase/migrations/[0-9]{14}_[a-z0-9_]+\\.sql)$",
+              pattern: "^(tests/sql/bury-acuity-authority/(?:00_baseline|10_p1_noncustomer_identity_approval)\\.sql|supabase/migrations/[0-9]{14}_[a-z0-9_]+\\.sql)$",
             },
             sha256: ref("sha256"),
           },
         },
       },
-      approvals: {
-        type: "array",
-        minItems: 2,
-        maxItems: 2,
-        items: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            authorityRole: { enum: ["business-release-owner", "independent-qa-reviewer"] },
-            sha256: ref("sha256"),
-          },
-        },
-      },
-      actors: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          repositoryExecutor: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              githubLogin: { type: "string", pattern: "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$" },
-              githubAccountId: { type: "string", pattern: "^[1-9][0-9]{0,19}$" },
-            },
-          },
-          businessReleaseEvidenceReference: { type: "string", pattern: "^BURY-[A-Z0-9][A-Z0-9/._:-]{7,200}$" },
-          independentQaEvidenceReference: { type: "string", pattern: "^BURY-[A-Z0-9][A-Z0-9/._:-]{7,200}$" },
-        },
-      },
+      owner: ref("owner"),
       boundaries: {
         type: "object",
         additionalProperties: false,
@@ -590,7 +561,24 @@ function inspectSchemaProfile(file, parsed, contract, errors) {
         ),
       },
     });
-  } else if (contract.schemaProfile === "consumption-claim") {
+  } else if (contract.schemaProfile === "owner-authorization-v2") {
+    expected.schemaVersion = { const: "BURY_P1_OWNER_AUTHORIZATION_V2" };
+    Object.assign(expected, {
+      ownerIdentity: ref("owner"),
+      candidateCommit: ref("gitSha"), candidateTree: ref("gitSha"), manifestSha256: ref("sha256"),
+      migrationHashes: {
+        type: "array", minItems: 1, maxItems: 16,
+        items: { type: "object", additionalProperties: false, properties: {
+          order: { type: "integer", minimum: 1, maximum: 16 },
+          path: { type: "string", pattern: "^(tests/sql/bury-acuity-authority/(?:00_baseline|10_p1_noncustomer_identity_approval)\\.sql|supabase/migrations/[0-9]{14}_[a-z0-9_]+\\.sql)$" },
+          sha256: ref("sha256"),
+        } },
+      },
+      executionWindow: ref("window"), recoveryOwner: ref("owner"), rollbackAuthority: ref("owner"),
+      oneUse: { const: true }, g2Authorized: { const: false }, productionBookingAuthorized: { const: false },
+    });
+  } else if (contract.schemaProfile === "consumption-claim-v2") {
+    expected.schemaVersion = { const: "bury-p1-consumption-claim-v2" };
     Object.assign(expected, {
       authorizationId: { type: "string", pattern: "^BURY-P1-[A-Z0-9-]{8,120}$" },
       repository: { const: "AlexM999911/singingattitude-release-attestations" },
@@ -598,41 +586,17 @@ function inspectSchemaProfile(file, parsed, contract, errors) {
       manifestSha256: ref("sha256"),
       attestationBundleSha256: ref("sha256"),
       candidateCommit: ref("gitSha"),
-      businessApprovalSha256: ref("sha256"),
-      qaReceiptSha256: ref("sha256"),
+      ownerAuthorizationSha256: ref("sha256"),
       executionWindow: ref("window"),
-      workflowRun: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          repository: { const: "AlexM999911/singingattitude-release-attestations" },
-          workflow: { const: ".github/workflows/bury-p1-one-use-consumption.yml" },
-          ref: { const: "refs/heads/main" },
-          sha: ref("gitSha"),
-          runId: { type: "string", pattern: "^[1-9][0-9]{0,19}$" },
-          runAttempt: { type: "string", pattern: "^[1-9][0-9]{0,9}$" },
-          actor: { type: "string", pattern: "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$" },
-          actorId: { type: "string", pattern: "^[1-9][0-9]{0,19}$" },
-        },
-      },
+      workflowRun: ref("workflowRun"),
       oneUse: { const: true },
       p1Authorized: { const: true },
       g2Authorized: { const: false },
+      productionBookingAuthorized: { const: false },
       issuedAtUtc: ref("canonicalUtc"),
     });
-  } else if (contract.schemaProfile === "external-approval-reference") {
-    Object.assign(expected, {
-      authorityRole: { enum: ["business-release-owner", "independent-qa-reviewer"] },
-      decision: { enum: ["APPROVED", "PASS"] },
-      evidenceReference: { type: "string", pattern: "^BURY-[A-Z0-9][A-Z0-9/._:-]{7,200}$" },
-      evidenceSha256: ref("sha256"),
-      acceptedAtUtc: ref("canonicalUtc"),
-      validUntilUtc: ref("canonicalUtc"),
-      subjectCommit: ref("gitSha"),
-      subjectCandidateLedgerSha256: ref("sha256"),
-      authorityGrants: { type: "array", maxItems: 0 },
-    });
-  } else if (contract.schemaProfile === "verification-receipt") {
+  } else if (contract.schemaProfile === "verification-receipt-v2") {
+    expected.schemaVersion = { const: "bury-p1-verification-receipt-v2" };
     Object.assign(expected, {
       recordId: { type: "string", pattern: "^BURY-P1-[A-Z0-9-]{8,120}$" },
       result: { const: "PASS" },
@@ -641,8 +605,7 @@ function inspectSchemaProfile(file, parsed, contract, errors) {
       candidateCommit: ref("gitSha"),
       manifestSha256: ref("sha256"),
       attestationBundleSha256: ref("sha256"),
-      businessApprovalSha256: ref("sha256"),
-      qaReceiptSha256: ref("sha256"),
+      ownerAuthorizationSha256: ref("sha256"),
       claim: {
         type: "object",
         additionalProperties: false,
@@ -651,20 +614,7 @@ function inspectSchemaProfile(file, parsed, contract, errors) {
           claimSha256: ref("sha256"),
         },
       },
-      finalizerWorkflowRun: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          repository: { const: "AlexM999911/singingattitude-release-attestations" },
-          workflow: { const: ".github/workflows/bury-p1-one-use-consumption.yml" },
-          ref: { const: "refs/heads/main" },
-          sha: ref("gitSha"),
-          runId: { type: "string", pattern: "^[1-9][0-9]{0,19}$" },
-          runAttempt: { type: "string", pattern: "^[1-9][0-9]{0,9}$" },
-          actor: { type: "string", pattern: "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$" },
-          actorId: { type: "string", pattern: "^[1-9][0-9]{0,19}$" },
-        },
-      },
+      finalizerWorkflowRun: ref("workflowRun"),
       checks: { type: "object", additionalProperties: false },
       authorityGrants: { type: "array", maxItems: 0 },
     });
@@ -679,9 +629,11 @@ function inspectSchemaProfile(file, parsed, contract, errors) {
     }
   }
   const requiredDefs = ["sha256", "gitSha", "canonicalUtc"];
-  if (["attestation-manifest", "consumption-claim"].includes(contract.schemaProfile)) {
+  if (["attestation-manifest-v2", "owner-authorization-v2", "consumption-claim-v2"].includes(contract.schemaProfile)) {
     requiredDefs.push("window");
   }
+  if (["attestation-manifest-v2", "owner-authorization-v2"].includes(contract.schemaProfile)) requiredDefs.push("owner");
+  if (["consumption-claim-v2", "verification-receipt-v2"].includes(contract.schemaProfile)) requiredDefs.push("workflowRun");
   if (JSON.stringify(Object.keys(parsed.$defs ?? {}).sort()) !== JSON.stringify(requiredDefs.sort())) {
     addError(errors, `JSON Schema definitions do not match its profile in ${file.filename}`);
   }
@@ -697,6 +649,22 @@ function inspectSchemaProfile(file, parsed, contract, errors) {
     if (!schemaSubsetMatches(parsed.$defs?.window, window)) {
       addError(errors, `JSON Schema execution window is unsafe in ${file.filename}`);
     }
+  }
+  if (requiredDefs.includes("owner")) {
+    const owner = { type: "object", additionalProperties: false, properties: {
+      githubLogin: { const: "AlexM999911" }, githubAccountId: { const: "234956861" },
+      businessOwner: { const: true }, technicalOwner: { const: true },
+    } };
+    if (!schemaSubsetMatches(parsed.$defs?.owner, owner)) addError(errors, `JSON Schema owner identity is unsafe in ${file.filename}`);
+  }
+  if (requiredDefs.includes("workflowRun")) {
+    const workflowRun = { type: "object", additionalProperties: false, properties: {
+      repository: { const: "AlexM999911/singingattitude-release-attestations" },
+      workflow: { const: ".github/workflows/bury-p1-one-use-consumption.yml" }, ref: { const: "refs/heads/main" },
+      sha: ref("gitSha"), runId: { type: "string", pattern: "^[1-9][0-9]{0,19}$" },
+      runAttempt: { type: "string", pattern: "^[1-9][0-9]{0,9}$" }, actor: { const: "AlexM999911" }, actorId: { const: "234956861" },
+    } };
+    if (!schemaSubsetMatches(parsed.$defs?.workflowRun, workflowRun)) addError(errors, `JSON Schema workflow identity is unsafe in ${file.filename}`);
   }
 }
 
@@ -981,8 +949,8 @@ export function validatePullRequestSnapshot(input) {
     completeBundle: "manifests/bury-p1-reviewed-complete-bundle.json",
     contentLedger: "manifests/bury-p1-reviewed-content-ledger.json",
     candidateTree: "manifests/bury-p1-reviewed-candidate-tree.json",
-    businessApproval: "approvals/bury-p1-business-release.json",
-    qaApproval: "approvals/bury-p1-independent-qa.json",
+    ownerAuthorization: "authorizations/bury-p1-owner-authorization.json",
+    ownerAuthorizationSidecar: "authorizations/bury-p1-owner-authorization.sha256",
   };
   const releaseChanged = Object.values(releasePaths).some((path) => decodedFiles.has(path));
   if (releaseChanged) {
@@ -993,9 +961,12 @@ export function validatePullRequestSnapshot(input) {
       try {
         const read = (path) => JSON.parse(decodedFiles.get(path));
         const manifest = read(releasePaths.manifest);
+        const ownerAuthorizationBytes = decodedFiles.get(releasePaths.ownerAuthorization);
         validateReleaseBundle({
           manifest,
-          approvals: [read(releasePaths.businessApproval), read(releasePaths.qaApproval)],
+          ownerAuthorization: JSON.parse(ownerAuthorizationBytes),
+          ownerAuthorizationBytes,
+          ownerAuthorizationSha256Sidecar: decodedFiles.get(releasePaths.ownerAuthorizationSidecar),
           completeBundle: read(releasePaths.completeBundle),
           contentLedger: read(releasePaths.contentLedger),
           candidateTree: read(releasePaths.candidateTree),
