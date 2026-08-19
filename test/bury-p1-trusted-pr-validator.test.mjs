@@ -692,6 +692,19 @@ test("rejects a base64-encoded credential in otherwise allowed public text", () 
     validatePullRequestSnapshot(snapshotFor([{ path: "README.md", content: hashes }])),
     { ok: true, errors: [] },
   );
+
+  const reviewedMigrationToken = "supabase/migrations/20260803195726_bury_lane0_internal_workflow";
+  assert.deepEqual(
+    validatePullRequestSnapshot(snapshotFor([{ path: "README.md", content: `${reviewedMigrationToken}.sql\n` }])),
+    { ok: true, errors: [] },
+  );
+
+  const nearMiss = `${reviewedMigrationToken}_A9fK2mQ7xR4vN8zL3pT6wY1cD5gH0jS2uV7bE4nM`;
+  const nearMissResult = validatePullRequestSnapshot(
+    snapshotFor([{ path: "README.md", content: `${nearMiss}\n` }]),
+  );
+  assert.equal(nearMissResult.ok, false);
+  assert.match(nearMissResult.errors.join("\n"), /encoded|entropy/i);
 });
 
 test("builds an exact workflow-identity ruleset that a same-repo status cannot spoof", async () => {
