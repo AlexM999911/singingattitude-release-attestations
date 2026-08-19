@@ -18,6 +18,9 @@ const SENSITIVE_CONTENT_PATTERNS = [
     pattern: /\b(?:api[_-]?key|access[_-]?token|credential|secret|password|signing[_-]?key)\b\s*["']?\s*[:=]\s*["'][^"']+["']/i,
   },
 ];
+const REVIEWED_PUBLIC_HIGH_ENTROPY_TOKENS = new Set([
+  "supabase/migrations/20260803195726_bury_lane0_internal_workflow",
+]);
 
 function addError(errors, message) {
   if (!errors.includes(message)) errors.push(message);
@@ -386,6 +389,7 @@ function inspectEncodedSecrets(file, text, errors) {
   const candidates = text.match(/[A-Za-z0-9+/_-]{24,}={0,2}/g) ?? [];
   for (const candidate of candidates) {
     if (/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(candidate)) continue;
+    if (REVIEWED_PUBLIC_HIGH_ENTROPY_TOKENS.has(candidate)) continue;
     if (candidate.length >= 32 && shannonEntropy(candidate) >= 4.5) {
       addError(errors, `Encoded or high-entropy public text in ${file.filename}`);
     }
