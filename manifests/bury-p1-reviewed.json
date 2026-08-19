@@ -1,0 +1,79 @@
+{
+  "authorization": {
+    "authorizationId": "BURY-P1-OWNER-V2-20260819T170500Z",
+    "g2Authorized": false,
+    "oneUse": true,
+    "p1Authorized": true,
+    "productionBookingAuthorized": false
+  },
+  "boundaries": {
+    "deployment": false,
+    "email": false,
+    "g2": false,
+    "payments": false,
+    "production": false,
+    "providers": false,
+    "publicBooking": false
+  },
+  "candidate": {
+    "commit": "e1181fd9ef93f9ac8cc8610dace0123583943c3c",
+    "completeBundleSha256": "3b44d61987efda6fe7cf16ee3e235f195cdf77740ca2ed9cea46d5b0e56780d3",
+    "contentLedgerSha256": "dd9489dc1d0b268217341158ab76f8fd699fd8a2502ed156a5ca915e54833870",
+    "migrationLedgerSha256": "1fa9ba471a40402dd2830299fb3e22359fa713c4898c57697631553d7aefad6d",
+    "pathListSha256": "c80ba8c3076158b15cf9b493b209aee38c9321bcd6ac41d6f45f5c11b75a5cd3",
+    "tree": "47654db20ef980b51c9c4f862dd7fec250c1149f"
+  },
+  "executionWindow": {
+    "expiresAtUtc": "2026-08-19T19:05:00Z",
+    "startsAtUtc": "2026-08-19T17:05:00Z"
+  },
+  "migrations": [
+    {
+      "order": 1,
+      "path": "tests/sql/bury-acuity-authority/00_baseline.sql",
+      "sha256": "38de88ec660f601ae384d72360c4b29f7f960fbf4d1d719f82b5334cc1067640"
+    },
+    {
+      "order": 2,
+      "path": "supabase/migrations/20260803195726_bury_lane0_internal_workflow.sql",
+      "sha256": "a3f3301dec2757dbb882ca16d75d6a582d6af8c6369cd309aa7af927d61816f6"
+    },
+    {
+      "order": 3,
+      "path": "supabase/migrations/20260803213000_ely_authoritative_state_boundary.sql",
+      "sha256": "d08bcbff8cc2f78031d7660a08bd6e8dc72e546356104cd0cee59f555f8d7e2c"
+    },
+    {
+      "order": 4,
+      "path": "supabase/migrations/20260804120000_ely_authoritative_state_boundary_hardening.sql",
+      "sha256": "10c7b94a5a23efd3acf1e45e30e5b84bbe5900788289aa5fb6783d8a153dec3b"
+    },
+    {
+      "order": 5,
+      "path": "supabase/migrations/20260804150000_bury_acuity_integration_foundation.sql",
+      "sha256": "e733c6266b429d746f5f464f3b758893efd225cdace711543766b88d2bd90ef5"
+    },
+    {
+      "order": 6,
+      "path": "tests/sql/bury-acuity-authority/10_p1_noncustomer_identity_approval.sql",
+      "sha256": "9df226cb9a98185de5029740bb0dc72c980fd4f2f1e19c2029d0c95a6fd4e6f9"
+    }
+  ],
+  "owner": {
+    "businessOwner": true,
+    "githubAccountId": "234956861",
+    "githubLogin": "AlexM999911",
+    "technicalOwner": true
+  },
+  "recordId": "BURY-P1-OWNER-V2-20260819T170500Z",
+  "repository": "AlexM999911/singingattitude-release-attestations",
+  "schemaVersion": "bury-p1-attestation-manifest-v2",
+  "target": {
+    "exclusiveLocalhost": true,
+    "noCustomerData": true,
+    "nonProduction": true,
+    "profile": "isolated-localhost-disposable-v1",
+    "reference": "local-supabase://bury-p1-20260819-170500"
+  },
+  "trustModel": "BURY-P1-MODE-A-GITHUB-ATTESTATION-SINGLE-OWNER-V2"
+}

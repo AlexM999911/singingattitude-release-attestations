@@ -1,0 +1,63 @@
+{
+  "candidateCommit": "e1181fd9ef93f9ac8cc8610dace0123583943c3c",
+  "candidateTree": "47654db20ef980b51c9c4f862dd7fec250c1149f",
+  "executionWindow": {
+    "expiresAtUtc": "2026-08-19T19:05:00Z",
+    "startsAtUtc": "2026-08-19T17:05:00Z"
+  },
+  "g2Authorized": false,
+  "manifestSha256": "600e7686291792584fd7dc786f214e6dce7284e1d21653a1f0d67943465d0aba",
+  "migrationHashes": [
+    {
+      "order": 1,
+      "path": "tests/sql/bury-acuity-authority/00_baseline.sql",
+      "sha256": "38de88ec660f601ae384d72360c4b29f7f960fbf4d1d719f82b5334cc1067640"
+    },
+    {
+      "order": 2,
+      "path": "supabase/migrations/20260803195726_bury_lane0_internal_workflow.sql",
+      "sha256": "a3f3301dec2757dbb882ca16d75d6a582d6af8c6369cd309aa7af927d61816f6"
+    },
+    {
+      "order": 3,
+      "path": "supabase/migrations/20260803213000_ely_authoritative_state_boundary.sql",
+      "sha256": "d08bcbff8cc2f78031d7660a08bd6e8dc72e546356104cd0cee59f555f8d7e2c"
+    },
+    {
+      "order": 4,
+      "path": "supabase/migrations/20260804120000_ely_authoritative_state_boundary_hardening.sql",
+      "sha256": "10c7b94a5a23efd3acf1e45e30e5b84bbe5900788289aa5fb6783d8a153dec3b"
+    },
+    {
+      "order": 5,
+      "path": "supabase/migrations/20260804150000_bury_acuity_integration_foundation.sql",
+      "sha256": "e733c6266b429d746f5f464f3b758893efd225cdace711543766b88d2bd90ef5"
+    },
+    {
+      "order": 6,
+      "path": "tests/sql/bury-acuity-authority/10_p1_noncustomer_identity_approval.sql",
+      "sha256": "9df226cb9a98185de5029740bb0dc72c980fd4f2f1e19c2029d0c95a6fd4e6f9"
+    }
+  ],
+  "oneUse": true,
+  "ownerIdentity": {
+    "businessOwner": true,
+    "githubAccountId": "234956861",
+    "githubLogin": "AlexM999911",
+    "technicalOwner": true
+  },
+  "productionBookingAuthorized": false,
+  "recoveryOwner": {
+    "businessOwner": true,
+    "githubAccountId": "234956861",
+    "githubLogin": "AlexM999911",
+    "technicalOwner": true
+  },
+  "rollbackAuthority": {
+    "businessOwner": true,
+    "githubAccountId": "234956861",
+    "githubLogin": "AlexM999911",
+    "technicalOwner": true
+  },
+  "schemaVersion": "BURY_P1_OWNER_AUTHORIZATION_V2"
+}
