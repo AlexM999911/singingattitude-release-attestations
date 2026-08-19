@@ -1,0 +1,110 @@
+{
+  "commit": "e1181fd9ef93f9ac8cc8610dace0123583943c3c",
+  "entries": [
+    {
+      "path": "docs/local-lessons/bury-p1-single-owner-governance-v2.md",
+      "sha256": "460dd28b3609a4e09553e4f5f9e1421b4179dced5a58bbd5710757f4e15cd06d"
+    },
+    {
+      "path": "scripts/lib/bury-p1-disposable-database-runner.mjs",
+      "sha256": "4c7882ff02f1fedd2dd51ee63a4f0361a9d242bf433d8fde0fe7a81afb9cf83d"
+    },
+    {
+      "path": "scripts/lib/bury-p1-github-app-publisher.mjs",
+      "sha256": "244909d4f3dc65308645a3c2c17a071230d0fff1fff724ba1cbbbdca4cd3ef04"
+    },
+    {
+      "path": "scripts/lib/bury-p1-github-evidence-collector.mjs",
+      "sha256": "16f3e7b1706c26ff9556864d5be01b41611c8ee786afb192b93471ece56f96e4"
+    },
+    {
+      "path": "scripts/lib/bury-p1-local-candidate.mjs",
+      "sha256": "e355639fc600f2dd1cdb3a743e5700a5b0130fcdee1ff725bf1ecd2c1efdbb28"
+    },
+    {
+      "path": "scripts/lib/bury-p1-mode-a-verifier.mjs",
+      "sha256": "2a00d8163ea7572b0fee29442a7ef8848f416bec4c3d261396f218503684dac1"
+    },
+    {
+      "path": "scripts/lib/bury-p1-owner-v2-transition-publisher.mjs",
+      "sha256": "99a296016e36a22eec28478514eb72272d30b026f13d9024a73c32c268089285"
+    },
+    {
+      "path": "scripts/publish-bury-p1-github-app-check.mjs",
+      "sha256": "e64e118eb9a6d2887cbf21b2e3d9467285c66b9571dcbef922e9fb7141b6b83a"
+    },
+    {
+      "path": "scripts/publish-bury-p1-owner-v2-transition-check.mjs",
+      "sha256": "5054b24ad7fff158721a670383260f66ff322f6a99ac6181ae46779c22be7901"
+    },
+    {
+      "path": "scripts/validate-bury-p1-isolated.mjs",
+      "sha256": "d5252140ce364a189529de42d44f4f070ed3081b9f4496bfeed1dae87b094454"
+    },
+    {
+      "path": "supabase/migrations/20260803195726_bury_lane0_internal_workflow.sql",
+      "sha256": "a3f3301dec2757dbb882ca16d75d6a582d6af8c6369cd309aa7af927d61816f6"
+    },
+    {
+      "path": "supabase/migrations/20260803213000_ely_authoritative_state_boundary.sql",
+      "sha256": "d08bcbff8cc2f78031d7660a08bd6e8dc72e546356104cd0cee59f555f8d7e2c"
+    },
+    {
+      "path": "supabase/migrations/20260804120000_ely_authoritative_state_boundary_hardening.sql",
+      "sha256": "10c7b94a5a23efd3acf1e45e30e5b84bbe5900788289aa5fb6783d8a153dec3b"
+    },
+    {
+      "path": "supabase/migrations/20260804150000_bury_acuity_integration_foundation.sql",
+      "sha256": "e733c6266b429d746f5f464f3b758893efd225cdace711543766b88d2bd90ef5"
+    },
+    {
+      "path": "tests/sql/bury-acuity-authority/00_baseline.sql",
+      "sha256": "38de88ec660f601ae384d72360c4b29f7f960fbf4d1d719f82b5334cc1067640"
+    },
+    {
+      "path": "tests/sql/bury-acuity-authority/00_disposable_cluster_preflight.sql",
+      "sha256": "1fbfdbf94e3f5811eff81e2d13f197237538e7b1bc530719013435ed127cc71a"
+    },
+    {
+      "path": "tests/sql/bury-acuity-authority/10_p1_noncustomer_identity_approval.sql",
+      "sha256": "9df226cb9a98185de5029740bb0dc72c980fd4f2f1e19c2029d0c95a6fd4e6f9"
+    },
+    {
+      "path": "tests/sql/bury-acuity-authority/95_p1_authorization_readback.sql",
+      "sha256": "ffa887deaf19f4358dabdb91651b75bb901fec16e62a1ba0f0f0a43ed4a1ba76"
+    },
+    {
+      "path": "tests/sql/ely-authoritative-boundary/05_hardening_preflight.sql",
+      "sha256": "89abc99b8b3a83750d077945820db82fbc7a85a0e4dbb086e1259d7dc4b79e7b"
+    },
+    {
+      "path": "tests/unit/bury-p1-disposable-database-runner.test.mjs",
+      "sha256": "bf1a6d284afb432e9dbe5ce85f5701f9de273cbcbb93973b1db173bd8c11434e"
+    },
+    {
+      "path": "tests/unit/bury-p1-github-app-publisher.test.mjs",
+      "sha256": "e65c50f03d14ff2ae22c4dac669f0d28ec7a163961f223c1ec5fec279341e6cf"
+    },
+    {
+      "path": "tests/unit/bury-p1-github-evidence-collector.test.mjs",
+      "sha256": "7a338c8fb2b93371ec1bb8c95c8b8e95e15f7743c7413626841b6718fff32639"
+    },
+    {
+      "path": "tests/unit/bury-p1-isolated-runner.test.mjs",
+      "sha256": "86c28a349dba47147c852beaa80deed2debaa6373d6fb37235b314226599441c"
+    },
+    {
+      "path": "tests/unit/bury-p1-local-candidate.test.mjs",
+      "sha256": "d0fddae6a7023c8e5e1143b0a593bbb1d7410ede2709f63eb3c359be7aececae"
+    },
+    {
+      "path": "tests/unit/bury-p1-mode-a-verifier.test.mjs",
+      "sha256": "b527b792a081033ce39382751bd4dabc79a61cfd47451f4a1d9376326f0157ec"
+    },
+    {
+      "path": "tests/unit/bury-p1-owner-v2-transition-publisher.test.mjs",
+      "sha256": "b86b97e61759317ca63aed0c43e453e09a7f924124f3bcd5f01595dad2be5dfd"
+    }
+  ],
+  "tree": "47654db20ef980b51c9c4f862dd7fec250c1149f"
+}

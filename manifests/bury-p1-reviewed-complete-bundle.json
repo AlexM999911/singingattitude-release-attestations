@@ -1,0 +1,8 @@
+{
+  "candidateCommit": "e1181fd9ef93f9ac8cc8610dace0123583943c3c",
+  "candidateTree": "47654db20ef980b51c9c4f862dd7fec250c1149f",
+  "contentLedgerSha256": "dd9489dc1d0b268217341158ab76f8fd699fd8a2502ed156a5ca915e54833870",
+  "migrationLedgerSha256": "1fa9ba471a40402dd2830299fb3e22359fa713c4898c57697631553d7aefad6d",
+  "pathListSha256": "c80ba8c3076158b15cf9b493b209aee38c9321bcd6ac41d6f45f5c11b75a5cd3",
+  "schemaVersion": "bury-p1-complete-bundle-v2"
+}
